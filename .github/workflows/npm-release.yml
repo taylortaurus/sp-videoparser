@@ -1,0 +1,163 @@
+name: npm-release
+
+# 推送 v* 标签或手动触发时，跨平台交叉编译预编译二进制并发布到 npm。
+# 需在仓库 Secrets 配置 NPM_TOKEN（具备 @rust-video-parser scope 与主包发布权限）。
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "发布版本号（如 2.1.0）"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: 构建 ${{ matrix.key }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: win32-x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: rust_video_parser.exe
+            zig: false
+          - key: darwin-x64
+            os: macos-14
+            target: x86_64-apple-darwin
+            bin: rust_video_parser
+            zig: false
+          - key: darwin-arm64
+            os: macos-14
+            target: aarch64-apple-darwin
+            bin: rust_video_parser
+            zig: false
+          - key: linux-x64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            bin: rust_video_parser
+            zig: true
+          - key: linux-arm64
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            bin: rust_video_parser
+            zig: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 构建前端（供 rust-embed 内嵌）
+        working-directory: frontend
+        run: |
+          npm ci
+          npx vite build --outDir ../templates/dist
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 缓存 Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: 安装 cargo-zigbuild（musl 交叉编译）
+        if: matrix.zig
+        run: |
+          pip install ziglang
+          cargo install --locked cargo-zigbuild
+
+      - name: 编译（zigbuild）
+        if: matrix.zig
+        run: cargo zigbuild --release --target ${{ matrix.target }}
+
+      - name: 编译（原生）
+        if: ${{ !matrix.zig }}
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: 收集二进制
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/${{ matrix.bin }}" "dist/${{ matrix.bin }}"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.key }}
+          path: dist/${{ matrix.bin }}
+          if-no-files-found: error
+
+  publish:
+    name: 发布 npm
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: 解析版本号
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            V="${{ github.event.inputs.version }}"
+          else
+            V="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - name: 下载全部二进制产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 注入二进制到各平台子包
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in win32-x64 darwin-x64 darwin-arm64 linux-x64 linux-arm64; do
+            mkdir -p "npm/$key/bin"
+            cp artifacts/bin-$key/* "npm/$key/bin/"
+            # 非 Windows 二进制赋可执行权限
+            if [ "$key" != "win32-x64" ]; then
+              chmod +x "npm/$key/bin/rust_video_parser"
+            fi
+          done
+
+      - name: 同步版本号
+        run: node npm/scripts/prepare.mjs "${{ steps.ver.outputs.version }}"
+
+      - name: 发布平台子包
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          for key in win32-x64 darwin-x64 darwin-arm64 linux-x64 linux-arm64; do
+            ( cd "npm/$key" && npm publish --access public )
+          done
+
+      - name: 发布主包
+        shell: bash
+        working-directory: npm/rust-video-parser
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

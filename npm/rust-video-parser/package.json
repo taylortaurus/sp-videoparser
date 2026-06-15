@@ -1,0 +1,41 @@
+{
+  "name": "rust-video-parser",
+  "version": "2.1.0",
+  "description": "企业级全平台短视频解析 CLI —— 26 个平台无水印解析，Rust 实现，预编译多平台二进制",
+  "keywords": [
+    "video",
+    "parser",
+    "douyin",
+    "bilibili",
+    "tiktok",
+    "downloader",
+    "cli",
+    "rust"
+  ],
+  "homepage": "https://github.com/eginner01/rust_video#readme",
+  "bugs": {
+    "url": "https://github.com/eginner01/rust_video/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eginner01/rust_video.git"
+  },
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "rust-video": "bin/rust-video.js"
+  },
+  "files": [
+    "bin/"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "optionalDependencies": {
+    "@rust-video-parser/win32-x64": "2.1.0",
+    "@rust-video-parser/darwin-x64": "2.1.0",
+    "@rust-video-parser/darwin-arm64": "2.1.0",
+    "@rust-video-parser/linux-x64": "2.1.0",
+    "@rust-video-parser/linux-arm64": "2.1.0"
+  }
+}

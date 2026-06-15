@@ -1,0 +1,2 @@
+# 占位文件：保证 templates/dist 目录存在以便 rust-embed 编译。
+# 实际前端资源由 `vite build --outDir templates/dist` 生成（已被 .gitignore 忽略）。

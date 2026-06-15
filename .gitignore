@@ -20,7 +20,9 @@ package-lock.json.bak
 # 构建产物
 frontend/dist/
 frontend/.vite/
-templates/dist/
+# 前端内嵌目录：忽略构建产物，但保留 .gitkeep 以保证 rust-embed 编译期目录存在
+templates/dist/*
+!templates/dist/.gitkeep
 
 # 缓存
 frontend/.cache/

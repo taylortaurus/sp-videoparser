@@ -17,8 +17,8 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tower_http::cors::CorsLayer;
-use tower_http::services::ServeDir;
 use reqwest::Client;
+use rust_embed::RustEmbed;
 
 /// 简单的按 IP 固定窗口限流器（每分钟）
 struct RateLimiter {
@@ -256,7 +256,7 @@ pub async fn start_server(port: u16) -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(index_handler))
         .route("/title.jpg", get(title_image_handler))
-        .nest_service("/assets", ServeDir::new("templates/dist/assets"))
+        .route("/assets/*path", get(assets_handler))
         .nest("/api", api_routes)
         .layer(middleware::from_fn_with_state(
             security_state,
@@ -277,33 +277,59 @@ pub async fn start_server(port: u16) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// 前端静态资源（编译期由 templates/dist 内嵌进二进制，serve 无需外部文件）
+#[derive(RustEmbed)]
+#[folder = "templates/dist/"]
+struct Assets;
+
+/// 按扩展名推断 MIME 类型
+fn mime_for(path: &str) -> &'static str {
+    match path.rsplit('.').next().unwrap_or("") {
+        "html" => "text/html; charset=utf-8",
+        "js" | "mjs" => "application/javascript; charset=utf-8",
+        "css" => "text/css; charset=utf-8",
+        "json" | "map" => "application/json",
+        "svg" => "image/svg+xml",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        "ico" => "image/x-icon",
+        "woff2" => "font/woff2",
+        "woff" => "font/woff",
+        "ttf" => "font/ttf",
+        _ => "application/octet-stream",
+    }
+}
+
+/// 从内嵌资源返回指定文件
+fn embedded_response(path: &str) -> Response {
+    match Assets::get(path) {
+        Some(file) => (
+            [(header::CONTENT_TYPE, mime_for(path))],
+            file.data.into_owned(),
+        )
+            .into_response(),
+        None => (StatusCode::NOT_FOUND, "Not Found").into_response(),
+    }
+}
+
 async fn index_handler() -> impl IntoResponse {
-    match tokio::fs::read_to_string("templates/dist/index.html").await {
-        Ok(content) => Html(content).into_response(),
-        Err(e) => {
-            tracing::error!(error = %e, "读取首页模板失败");
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to load page"
-            ).into_response()
+    match Assets::get("index.html") {
+        Some(file) => Html(String::from_utf8_lossy(&file.data).into_owned()).into_response(),
+        None => {
+            tracing::error!("内嵌资源中缺少 index.html, 前端可能未构建");
+            (StatusCode::INTERNAL_SERVER_ERROR, "前端资源未构建").into_response()
         }
     }
 }
 
 async fn title_image_handler() -> impl IntoResponse {
-    match tokio::fs::read("templates/dist/title.jpg").await {
-        Ok(content) => (
-            [(header::CONTENT_TYPE, "image/jpeg")],
-            content
-        ).into_response(),
-        Err(e) => {
-            tracing::error!(error = %e, "读取标题图片失败");
-            (
-                StatusCode::NOT_FOUND,
-                "Image not found"
-            ).into_response()
-        }
-    }
+    embedded_response("title.jpg")
+}
+
+async fn assets_handler(axum::extract::Path(path): axum::extract::Path<String>) -> impl IntoResponse {
+    embedded_response(&format!("assets/{}", path))
 }
 
 async fn health_handler() -> Json<serde_json::Value> {

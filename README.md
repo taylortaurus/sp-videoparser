@@ -200,7 +200,20 @@ flowchart LR
     class S1,S2 app;
 ```
 
-### 方式一：Docker 镜像（推荐）
+### 方式一：npm 安装 CLI（推荐用于命令行）
+
+通过 npm 安装即可获得 `rust-video` 命令，无需本地工具链——安装时会按当前系统自动拉取匹配的预编译二进制：
+
+```bash
+npm install -g rust-video-parser
+
+rust-video parse "https://v.douyin.com/xxxxxx/"
+rust-video serve --port 8080        # 前端已内嵌，开箱即用
+```
+
+支持平台：win32-x64、darwin-x64、darwin-arm64、linux-x64、linux-arm64。其分发采用 `optionalDependencies` 预编译模型（各平台二进制独立成包，npm 依据 `os`/`cpu` 仅安装匹配项）。
+
+### 方式二：Docker 镜像（推荐用于服务部署）
 
 ```bash
 docker run -d \
@@ -214,7 +227,7 @@ docker run -d \
 
 服务启动后访问 `http://localhost:8080`。
 
-### 方式二：Docker Compose
+### 方式三：Docker Compose
 
 仓库根目录已提供 `docker-compose.yml`，包含端口映射、资源限额与健康检查：
 
@@ -225,12 +238,12 @@ docker-compose logs -f      # 跟踪日志
 docker-compose down         # 停止并清理
 ```
 
-### 方式三：源码构建
+### 方式四：源码构建
 
 前置依赖：Rust 1.75+、Node.js 18+、npm 8+。
 
 ```bash
-# 1. 构建前端静态资源
+# 1. 构建前端静态资源（将被 rust-embed 编译期内嵌进二进制）
 cd frontend
 npm ci
 npx vite build --outDir ../templates/dist
@@ -240,6 +253,8 @@ cd ..
 cargo build --release
 ./target/release/rust_video_parser serve --port 8080
 ```
+
+> 提示：仓库仅提交 `templates/dist/.gitkeep` 占位以保证编译。未先构建前端时，`serve` 的页面为空（API 与 CLI 不受影响）；执行上面第 1 步后前端资源即被内嵌。
 
 ---
 
@@ -671,7 +686,13 @@ rust_video/
 │       ├── mod.rs         # VideoParser trait、域名识别、工厂分发
 │       └── *.rs           # 26 个平台实现
 ├── frontend/              # Vue 3 + Vuetify 3 前端工程
-├── templates/dist/        # 前端构建产物（服务运行时读取）
+├── templates/dist/        # 前端构建产物（rust-embed 编译期内嵌，仅提交 .gitkeep）
+├── npm/                   # npm 分发
+│   ├── rust-video-parser/ # 主包：bin 启动壳 + optionalDependencies
+│   ├── <platform>-<arch>/ # 5 个平台子包（os/cpu 限定）
+│   └── scripts/prepare.mjs# 版本同步脚本
+├── .github/workflows/
+│   └── npm-release.yml    # 跨平台交叉编译并发布 npm
 ├── Dockerfile             # 多阶段构建
 ├── docker-compose.yml
 └── Cargo.toml
@@ -725,6 +746,33 @@ flowchart LR
     class S1,S2 build;
     class S3,OUT out;
 ```
+
+### npm 预编译分发模型
+
+CLI 通过 npm 分发，采用 `optionalDependencies` 预编译二进制模型：主包仅含 JS 启动壳，各平台二进制独立成包并以 `os`/`cpu` 限定，npm 安装时只拉取与当前系统匹配的那一个。
+
+```mermaid
+flowchart TB
+    Install["npm install -g rust-video-parser"]
+    Main["主包 rust-video-parser<br/>bin/rust-video.js (启动壳)"]
+    Install --> Main
+    Main -. optionalDependencies .-> W["@rust-video-parser/win32-x64"]
+    Main -. optionalDependencies .-> DX["@rust-video-parser/darwin-x64"]
+    Main -. optionalDependencies .-> DA["@rust-video-parser/darwin-arm64"]
+    Main -. optionalDependencies .-> LX["@rust-video-parser/linux-x64"]
+    Main -. optionalDependencies .-> LA["@rust-video-parser/linux-arm64"]
+    Pick{"按 process.platform + process.arch<br/>匹配 os/cpu"}
+    Main --> Pick
+    Pick -->|"仅安装匹配项"| Hit["对应平台二进制包"]
+    Hit --> Exec["spawn 预编译 rust_video_parser"]
+
+    classDef pkg fill:#1f6feb22,stroke:#1f6feb,stroke-width:1px;
+    classDef hit fill:#2ea04322,stroke:#2ea043,stroke-width:1px;
+    class W,DX,DA,LX,LA pkg;
+    class Hit,Exec hit;
+```
+
+发布流程：推送 `v*` 标签 → GitHub Actions 矩阵交叉编译 5 平台（Linux 走 `cargo-zigbuild` 静态 musl，TLS 用 rustls 免系统依赖）→ 注入各子包 → `npm publish`。相关产物位于仓库 `npm/` 目录，版本由 `npm/scripts/prepare.mjs` 统一同步。
 
 ---
 

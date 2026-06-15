@@ -1,0 +1,19 @@
+{
+  "name": "@rust-video-parser/linux-arm64",
+  "version": "2.1.0",
+  "description": "rust-video-parser 预编译二进制 (linux-arm64)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eginner01/rust_video.git"
+  },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin/"
+  ]
+}
