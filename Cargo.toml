@@ -1,9 +1,9 @@
 [package]
 name = "rust_video_parser"
-version = "2.1.0"
+version = "2.2.0"
 edition = "2021"
 authors = ["Rust Video Parser Team"]
-description = "A powerful video parser with sci-fi particle effects, supporting 26 platforms with video proxy and download"
+description = "A fast all-platform short-video parser with online preview and download, supporting 26 platforms"
 
 [[bin]]
 name = "rust_video_parser"

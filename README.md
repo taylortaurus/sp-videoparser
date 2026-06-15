@@ -10,7 +10,7 @@
 [![Platforms](https://img.shields.io/badge/Platforms-26-2ea043?style=flat-square)](#平台支持矩阵)
 [![Docker](https://img.shields.io/badge/Docker-Ready-1f6feb?style=flat-square&logo=docker)](https://hub.docker.com/r/eginner01/rust_video_parser)
 [![License](https://img.shields.io/badge/License-MIT-6e7681?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.1.0-2ea043?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/Version-2.2.0-2ea043?style=flat-square)](#)
 
 [概述](#概述) · [架构](#技术架构) · [快速开始](#快速开始) · [配置](#配置参考) · [命令行](#命令行接口) · [HTTP API](#http-api-参考) · [安全](#安全特性) · [可观测性](#可观测性与日志)
 
@@ -20,7 +20,7 @@
 
 ## 概述
 
-Rust Video Parser 是一套面向生产环境的全平台短视频解析服务，基于 **Rust + Axum** 异步技术栈构建，前端采用 **Vue 3 + Vuetify 3**。系统提供 **26 个**主流平台的无水印解析能力，覆盖视频、封面、图集、背景音乐及作者信息提取，并内置访问控制、限流、SSRF 防护、流式代理与结构化可观测性，可直接部署于企业内网或公有云。
+Rust Video Parser 是一套面向生产环境的全平台短视频解析服务，基于 **Rust + Axum** 异步技术栈构建，前端采用 **Vue 3 + 自研 CSS 设计系统**。系统提供 **26 个**主流平台的无水印解析能力，覆盖视频、封面、图集、背景音乐及作者信息提取，并内置访问控制、限流、SSRF 防护、流式代理与结构化可观测性，可直接部署于企业内网或公有云。
 
 ### 核心能力
 
@@ -123,7 +123,7 @@ flowchart LR
 | 后端 | Scraper / Regex | 0.18 / 1.10 | HTML 与文本提取 |
 | 后端 | Tracing | 0.1 | 结构化日志 |
 | 前端 | Vue | 3.4 | 渐进式前端框架 |
-| 前端 | Vuetify | 3.5 | Material Design 组件库 |
+| 前端 | 自研 CSS | — | 设计令牌 + 亮/暗双主题（无 UI 框架） |
 | 前端 | Vite | 5.0 | 构建工具 |
 | 部署 | Docker | 多阶段 | 前端构建 + Rust 构建 + Alpine 运行时 |
 
