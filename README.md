@@ -22,8 +22,6 @@
 
 Rust Video Parser 是一套面向生产环境的全平台短视频解析服务，基于 **Rust + Axum** 异步技术栈构建，前端采用 **Vue 3 + Vuetify 3**。系统提供 **26 个**主流平台的无水印解析能力，覆盖视频、封面、图集、背景音乐及作者信息提取，并内置访问控制、限流、SSRF 防护、流式代理与结构化可观测性，可直接部署于企业内网或公有云。
 
-本项目为 Go 版 [parse-video](https://github.com/wujunwei928/parse-video) 的 Rust 重构实现，在保持解析能力对齐的同时，强化了内存安全、运行时性能与运维可观测性。
-
 ### 核心能力
 
 | 维度 | 说明 |
@@ -801,5 +799,4 @@ flowchart TB
 
 ## 致谢
 
-- [parse-video](https://github.com/wujunwei928/parse-video) —— Go 版参考实现
-- Rust、Tokio、Axum 及 Vue 生态社区
+感谢 Rust、Tokio、Axum、Vue、Vite 及相关开源社区的贡献者。
