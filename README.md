@@ -316,15 +316,15 @@ CLI 覆盖服务端的全部解析能力，`parse` / `id` 支持 `--json` 输出
 | `platforms` | `/api/platforms` | 列出全部受支持平台及其域名 |
 | `version` | — | 输出版本号 |
 
-> 二进制位置：源码构建后位于 `./target/release/rust_video_parser`；容器内命令名为 `rust_video_parser`（可经 `docker exec` 调用）。下文示例统一以 `rust_video_parser` 表示。
+> **命令名称说明**：npm 安装后命令为 `rust-video`；直接下载二进制或源码构建后为 `rust_video_parser`（位于 `./target/release/rust_video_parser`）；Docker 容器内为 `rust_video_parser`（可通过 `docker exec` 调用）。下文示例以 **`rust-video`**（npm 推荐方式）为准，其他方式请替换命令名。
 
 ### 查看帮助
 
 ```console
-$ rust_video_parser --help
+$ rust-video --help
 短视频去水印解析工具 - 支持26个平台
 
-Usage: rust_video_parser [OPTIONS] [COMMAND]
+Usage: rust-video [OPTIONS] [COMMAND]
 
 Commands:
   serve      启动HTTP服务器
@@ -341,13 +341,13 @@ Options:
   -V, --version      Print version
 
 # 查看子命令帮助
-$ rust_video_parser id --help
+$ rust-video id --help
 ```
 
 ### serve —— 启动 HTTP 服务
 
 ```console
-$ rust_video_parser serve --port 8080
+$ rust-video serve --port 8080
 2026-06-15T23:38:34.115+08:00  INFO rust_video_parser::server: 视频解析服务正在启动 version="2.1.0"
 2026-06-15T23:38:34.115+08:00  INFO rust_video_parser::server: 限流策略已配置 rate_limit_rpm=60
 2026-06-15T23:38:34.115+08:00  INFO rust_video_parser::server: Basic 认证策略已配置 enabled=false
@@ -362,7 +362,7 @@ $ SERVER_PORT=9000 PARSE_VIDEO_USERNAME=admin PARSE_VIDEO_PASSWORD=secret rust_v
 ### parse —— 解析单条链接
 
 ```console
-$ rust_video_parser parse "https://v.douyin.com/xxxxxx/"
+$ rust-video parse "https://v.douyin.com/xxxxxx/"
 正在解析视频...
 提取到链接: https://v.douyin.com/xxxxxx/
 解析成功
@@ -375,7 +375,7 @@ $ rust_video_parser parse "https://v.douyin.com/xxxxxx/"
 加 `--json` 输出与 HTTP API 完全一致的响应结构，适合脚本处理（可配合 `jq`）：
 
 ```console
-$ rust_video_parser parse "https://v.douyin.com/xxxxxx/" --json
+$ rust-video parse "https://v.douyin.com/xxxxxx/" --json
 {
   "code": 200,
   "msg": "解析成功",
@@ -388,7 +388,7 @@ $ rust_video_parser parse "https://v.douyin.com/xxxxxx/" --json
 }
 
 # 提取直链
-$ rust_video_parser parse "https://v.douyin.com/xxxxxx/" --json | jq -r '.data.video_url'
+$ rust-video parse "https://v.douyin.com/xxxxxx/" --json | jq -r '.data.video_url'
 ```
 
 > 入参可直接粘贴含链接的整段分享文案，程序会自动用正则提取其中的 URL。
@@ -398,7 +398,7 @@ $ rust_video_parser parse "https://v.douyin.com/xxxxxx/" --json | jq -r '.data.v
 对应 HTTP 接口 `/api/video/id/parse`，需用 `--source` 指定平台标识（见 `platforms`）；部分平台不支持按 ID 解析。
 
 ```console
-$ rust_video_parser id 7234567890123456789 --source douyin
+$ rust-video id 7234567890123456789 --source douyin
 正在解析视频...
 解析成功
 标题: 示例视频标题
@@ -406,7 +406,7 @@ $ rust_video_parser id 7234567890123456789 --source douyin
 视频地址: https://v3-web.douyinvod.com/...
 
 # JSON 输出（错误同样以统一结构返回）
-$ rust_video_parser id 123 --source notexist --json
+$ rust-video id 123 --source notexist --json
 {
   "code": 201,
   "msg": "不支持的平台: notexist（可用 platforms 命令查看支持列表）"
@@ -416,7 +416,7 @@ $ rust_video_parser id 123 --source notexist --json
 ### download —— 解析并下载到本地
 
 ```console
-$ rust_video_parser download "https://v.douyin.com/xxxxxx/" --output ./media
+$ rust-video download "https://v.douyin.com/xxxxxx/" --output ./media
 正在解析视频...
 解析成功: 示例视频标题
 2026-06-15T23:40:10.231+08:00  INFO rust_video_parser::download: 开始下载视频 file="示例视频标题.mp4"
@@ -429,7 +429,7 @@ $ rust_video_parser download "https://v.douyin.com/xxxxxx/" --output ./media
 ### platforms —— 列出受支持平台
 
 ```console
-$ rust_video_parser platforms
+$ rust-video platforms
 受支持的视频平台:
 
  1. 抖音 (douyin)
@@ -446,7 +446,7 @@ $ rust_video_parser platforms
 ### version —— 输出版本
 
 ```console
-$ rust_video_parser version
+$ rust-video version
 rust_video_parser 2.1.0
 ```
 
