@@ -150,20 +150,20 @@ impl DouyinParser {
         let json: Value = serde_json::from_str(&json_str)?;
         
         // 调试：打印JSON结构
-        tracing::debug!("JSON keys: {:?}", json.as_object().map(|o| o.keys().collect::<Vec<_>>()));
-        
+        tracing::debug!(keys = ?json.as_object().map(|o| o.keys().collect::<Vec<_>>()), "解析得到的 JSON 顶层键");
+
         if let Some(loader_data) = json.get("loaderData") {
             if let Some(obj) = loader_data.as_object() {
-                tracing::debug!("loaderData keys: {:?}", obj.keys().collect::<Vec<_>>());
-                
+                tracing::debug!(keys = ?obj.keys().collect::<Vec<_>>(), "loaderData 子键");
+
                 for (key, value) in obj {
-                    tracing::debug!("检查键: {}", key);
+                    tracing::debug!(key = %key, "检查 loaderData 键");
                     
                     if let Some(video_info_res) = value.get("videoInfoRes") {
                         if let Some(item_list) = video_info_res.get("item_list") {
                             if let Some(items) = item_list.as_array() {
                                 if let Some(first_item) = items.first() {
-                                    tracing::info!("✅ 成功在键 '{}' 中找到视频数据", key);
+                                    tracing::info!(key = %key, "在 loaderData 中定位到视频数据");
                                     return Ok(first_item.clone());
                                 }
                             }

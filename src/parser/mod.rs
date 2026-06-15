@@ -19,6 +19,11 @@ pub mod doupai;
 pub mod quanminkge;
 pub mod sixroom;
 pub mod xinpianchang;
+pub mod meipai;
+pub mod cctv;
+pub mod qqvideo;
+pub mod sohu;
+pub mod twitter;
 
 use crate::models::{VideoParseInfo, VideoSource};
 use anyhow::Result;
@@ -71,6 +76,11 @@ fn identify_video_source(url: &str) -> Result<VideoSource> {
         VideoSource::SixRoom,
         VideoSource::XinPianChang,
         VideoSource::HaoKan,
+        VideoSource::MeiPai,
+        VideoSource::CCTV,
+        VideoSource::QQVideo,
+        VideoSource::Sohu,
+        VideoSource::Twitter,
     ];
     
     for source in sources {
@@ -107,7 +117,11 @@ fn get_parser(source: VideoSource) -> Result<Box<dyn VideoParser>> {
         VideoSource::QuanMinKGe => Ok(Box::new(quanminkge::QuanminkgeParser)),
         VideoSource::SixRoom => Ok(Box::new(sixroom::SixroomParser)),
         VideoSource::XinPianChang => Ok(Box::new(xinpianchang::XinpianchangParser)),
-        _ => Err(anyhow::anyhow!("平台 {} 暂不支持", source.display_name())),
+        VideoSource::MeiPai => Ok(Box::new(meipai::MeipaiParser)),
+        VideoSource::CCTV => Ok(Box::new(cctv::CctvParser)),
+        VideoSource::QQVideo => Ok(Box::new(qqvideo::QqvideoParser)),
+        VideoSource::Sohu => Ok(Box::new(sohu::SohuParser)),
+        VideoSource::Twitter => Ok(Box::new(twitter::TwitterParser)),
     }
 }
 
@@ -134,6 +148,11 @@ pub fn get_supported_platforms() -> Vec<(VideoSource, &'static str, Vec<&'static
         (VideoSource::QuanMinKGe, "全民K歌", VideoSource::QuanMinKGe.share_url_domains()),
         (VideoSource::SixRoom, "六间房", VideoSource::SixRoom.share_url_domains()),
         (VideoSource::XinPianChang, "新片场", VideoSource::XinPianChang.share_url_domains()),
+        (VideoSource::MeiPai, "美拍", VideoSource::MeiPai.share_url_domains()),
+        (VideoSource::CCTV, "央视网", VideoSource::CCTV.share_url_domains()),
+        (VideoSource::QQVideo, "腾讯视频", VideoSource::QQVideo.share_url_domains()),
+        (VideoSource::Sohu, "搜狐视频", VideoSource::Sohu.share_url_domains()),
+        (VideoSource::Twitter, "Twitter", VideoSource::Twitter.share_url_domains()),
     ]
 }
 

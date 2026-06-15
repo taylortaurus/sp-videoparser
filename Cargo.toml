@@ -3,7 +3,7 @@ name = "rust_video_parser"
 version = "2.1.0"
 edition = "2021"
 authors = ["Rust Video Parser Team"]
-description = "A powerful video parser with sci-fi particle effects, supporting 21 platforms with video proxy and download"
+description = "A powerful video parser with sci-fi particle effects, supporting 26 platforms with video proxy and download"
 
 [[bin]]
 name = "rust_video_parser"
@@ -15,7 +15,7 @@ tokio = { version = "1", features = ["full"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
 
-reqwest = { version = "0.11", features = ["json", "cookies"] }
+reqwest = { version = "0.11", features = ["json", "cookies", "stream"] }
 
 async-trait = "0.1"
 
@@ -38,11 +38,13 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 dotenvy = "0.15"
 
-clap = { version = "4.4", features = ["derive"] }
+clap = { version = "4.4", features = ["derive", "env"] }
 
 rand = "0.8"
 
 chrono = "0.4"
+
+base64 = "0.22"
 
 [build-dependencies]
 winres = "0.1"

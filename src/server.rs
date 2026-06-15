@@ -3,19 +3,190 @@ use crate::parser::{parse_video_id, parse_video_share_url, get_supported_platfor
 use crate::utils::extract_url_from_string;
 use axum::{
     body::Body,
-    extract::{Query, ConnectInfo},
-    http::{header, StatusCode, Method, Uri},
+    extract::{Query, ConnectInfo, State},
+    http::{header, HeaderMap, StatusCode, Method, Uri},
     middleware::{self, Next},
     response::{Html, IntoResponse, Json, Response},
     routing::get,
     Router,
 };
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
-use std::time::Instant;
+use std::collections::HashMap;
+use std::net::{IpAddr, SocketAddr};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use reqwest::Client;
+
+/// 简单的按 IP 固定窗口限流器（每分钟）
+struct RateLimiter {
+    rpm: u32,
+    windows: Mutex<HashMap<IpAddr, (Instant, u32)>>,
+}
+
+impl RateLimiter {
+    fn new(rpm: u32) -> Self {
+        Self { rpm, windows: Mutex::new(HashMap::new()) }
+    }
+
+    /// 返回 true 表示允许，false 表示超出限额
+    fn check(&self, ip: IpAddr) -> bool {
+        let mut map = self.windows.lock().unwrap();
+        let now = Instant::now();
+        let entry = map.entry(ip).or_insert((now, 0));
+        if now.duration_since(entry.0) >= Duration::from_secs(60) {
+            *entry = (now, 0);
+        }
+        entry.1 += 1;
+        entry.1 <= self.rpm
+    }
+}
+
+/// 安全中间件共享状态：限流器 + 可选 Basic Auth 凭据
+#[derive(Clone)]
+struct SecurityState {
+    rate_limiter: Arc<RateLimiter>,
+    auth: Option<Arc<(String, String)>>,
+}
+
+fn env_u32(key: &str, default: u32) -> u32 {
+    std::env::var(key)
+        .ok()
+        .and_then(|v| v.parse::<u32>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(default)
+}
+
+/// 限流 + Basic Auth 中间件
+async fn security_middleware(
+    State(state): State<SecurityState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    req: axum::extract::Request,
+    next: Next,
+) -> Response {
+    let path = req.uri().path().to_string();
+
+    // 限流豁免：健康检查与静态资源
+    let rate_exempt = path == "/api/health"
+        || path.starts_with("/assets")
+        || path == "/title.jpg";
+    if !rate_exempt && !state.rate_limiter.check(addr.ip()) {
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            [(header::CONTENT_TYPE, "application/json")],
+            r#"{"code":429,"msg":"请求过于频繁，请稍后再试"}"#,
+        )
+            .into_response();
+    }
+
+    // Basic Auth：仅在配置了凭据时启用
+    if let Some(cred) = &state.auth {
+        let auth_exempt = path == "/"
+            || path == "/api/health"
+            || path == "/api/platforms"
+            || path.starts_with("/assets")
+            || path == "/title.jpg";
+        if !auth_exempt && !check_basic_auth(&req, cred) {
+            return (
+                StatusCode::UNAUTHORIZED,
+                [
+                    (header::CONTENT_TYPE, "application/json"),
+                    (header::WWW_AUTHENTICATE, "Basic realm=\"parse-video\""),
+                ],
+                r#"{"code":401,"msg":"需要认证"}"#,
+            )
+                .into_response();
+        }
+    }
+
+    next.run(req).await
+}
+
+/// 校验 Authorization: Basic 头是否匹配配置凭据
+fn check_basic_auth(req: &axum::extract::Request, cred: &(String, String)) -> bool {
+    let header_val = match req.headers().get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
+        Some(v) => v,
+        None => return false,
+    };
+    let encoded = match header_val.strip_prefix("Basic ") {
+        Some(e) => e,
+        None => return false,
+    };
+    let decoded = match STANDARD.decode(encoded) {
+        Ok(d) => d,
+        Err(_) => return false,
+    };
+    let decoded_str = String::from_utf8_lossy(&decoded);
+    let (user, pass) = match decoded_str.split_once(':') {
+        Some(p) => p,
+        None => return false,
+    };
+    user == cred.0 && pass == cred.1
+}
+
+/// Ctrl+C 优雅关闭信号
+async fn shutdown_signal() {
+    let _ = tokio::signal::ctrl_c().await;
+    tracing::info!("接收到中断信号, 开始优雅关闭服务");
+}
+
+/// 校验代理目标，防止 SSRF（仅允许 http/https 且解析到公网地址）
+async fn validate_proxy_target(raw: &str) -> Result<(), String> {
+    let parsed = url::Url::parse(raw).map_err(|_| "无效的URL".to_string())?;
+    match parsed.scheme() {
+        "http" | "https" => {}
+        _ => return Err("仅支持 http/https 协议".to_string()),
+    }
+    let host = parsed.host_str().ok_or_else(|| "URL缺少host".to_string())?.to_string();
+    if host.eq_ignore_ascii_case("localhost") {
+        return Err("禁止访问内网地址".to_string());
+    }
+    let port = parsed.port_or_known_default().unwrap_or(80);
+
+    // 解析所有 IP 并逐一校验是否为内网/保留地址
+    let addrs = tokio::net::lookup_host((host.as_str(), port))
+        .await
+        .map_err(|e| format!("DNS解析失败: {}", e))?;
+    let mut any = false;
+    for addr in addrs {
+        any = true;
+        if ip_is_blocked(addr.ip()) {
+            return Err("禁止访问内网/保留地址".to_string());
+        }
+    }
+    if !any {
+        return Err("无法解析目标主机".to_string());
+    }
+    Ok(())
+}
+
+/// 判断 IP 是否为内网/保留/特殊地址
+fn ip_is_blocked(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => {
+            v4.is_loopback()
+                || v4.is_private()
+                || v4.is_link_local()
+                || v4.is_unspecified()
+                || v4.is_multicast()
+                || v4.is_broadcast()
+                || v4.octets()[0] == 0
+        }
+        IpAddr::V6(v6) => {
+            if v6.is_loopback() || v6.is_unspecified() || v6.is_multicast() {
+                return true;
+            }
+            if let Some(mapped) = v6.to_ipv4_mapped() {
+                return ip_is_blocked(IpAddr::V4(mapped));
+            }
+            let seg = v6.segments();
+            // fc00::/7 唯一本地地址 或 fe80::/10 链路本地地址
+            (seg[0] & 0xfe00) == 0xfc00 || (seg[0] & 0xffc0) == 0xfe80
+        }
+    }
+}
 
 async fn logger_middleware(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -27,75 +198,82 @@ async fn logger_middleware(
     let start = Instant::now();
     let method_str = method.to_string();
     let path = uri.path().to_string();
-    let query = uri.query().map(|q| format!("?{}", q)).unwrap_or_default();
-    
+    let query = uri.query().unwrap_or("").to_string();
+
     // 处理请求
     let response = next.run(req).await;
-    
+
     let duration = start.elapsed();
     let status = response.status().as_u16();
-    
-    // 格式化响应时间
-    let duration_str = if duration.as_secs() > 0 {
-        format!("{:.2}s", duration.as_secs_f64())
-    } else if duration.as_millis() > 0 {
-        format!("{}ms", duration.as_millis())
-    } else {
-        format!("{}μs", duration.as_micros())
-    };
-    
-    println!(
-        "[RUST] {} | {:>3} | {:>8} | {:>15} | {:<6} \"{}{}\"",
-        chrono::Local::now().format("%Y/%m/%d - %H:%M:%S"),
-        status,
-        duration_str,
-        addr.ip(),
-        method_str,
-        path,
-        query
+    let latency_ms = duration.as_secs_f64() * 1000.0;
+
+    // 结构化访问日志
+    tracing::info!(
+        client_ip = %addr.ip(),
+        method = %method_str,
+        path = %path,
+        query = %query,
+        status = status,
+        latency_ms = format!("{:.2}", latency_ms),
+        "请求处理完成"
     );
-    
+
     response
 }
 
 pub async fn start_server(port: u16) -> anyhow::Result<()> {
-    // 打印启动信息
-    println!("\n╔══════════════════════════════════════════════════════════╗");
-    println!("║     🦀 Rust Video Parser v2.1.0                         ║");
-    println!("╚══════════════════════════════════════════════════════════╝\n");
-    
-    println!("[RUST-debug] Registering routes:");
-    println!("[RUST-debug] GET    /                              --> index_handler");
-    println!("[RUST-debug] GET    /api/video/share/url/parse     --> parse_share_url_handler");
-    println!("[RUST-debug] GET    /api/video/id/parse            --> parse_video_id_handler");
-    println!("[RUST-debug] GET    /api/platforms                 --> platforms_handler");
-    println!("[RUST-debug] GET    /api/proxy/video               --> proxy_video_handler");
-    println!("[RUST-debug] GET    /api/proxy/image               --> proxy_image_handler\n");
-    
+    tracing::info!(version = env!("CARGO_PKG_VERSION"), "视频解析服务正在启动");
+
     // API 路由（带 /api 前缀）
     let api_routes = Router::new()
+        .route("/health", get(health_handler))
         .route("/video/share/url/parse", get(parse_share_url_handler))
         .route("/video/id/parse", get(parse_video_id_handler))
         .route("/platforms", get(platforms_handler))
         .route("/proxy/video", get(proxy_video_handler))
         .route("/proxy/image", get(proxy_image_handler));
-    
+
+    // 安全中间件状态：限流（RATE_LIMIT_RPM，默认 60）+ 可选 Basic Auth
+    let rate_limit_rpm = env_u32("RATE_LIMIT_RPM", 60);
+    let username = std::env::var("PARSE_VIDEO_USERNAME").unwrap_or_default();
+    let password = std::env::var("PARSE_VIDEO_PASSWORD").unwrap_or_default();
+    let auth = if !username.is_empty() && !password.is_empty() {
+        Some(Arc::new((username, password)))
+    } else {
+        None
+    };
+    tracing::info!(rate_limit_rpm, "限流策略已配置");
+    tracing::info!(enabled = auth.is_some(), "Basic 认证策略已配置");
+    if std::env::var("PARSE_VIDEO_PROXY").map(|v| !v.is_empty()).unwrap_or(false) {
+        tracing::info!("已启用出站代理");
+    }
+    let security_state = SecurityState {
+        rate_limiter: Arc::new(RateLimiter::new(rate_limit_rpm)),
+        auth,
+    };
+
     // 主应用路由
     let app = Router::new()
         .route("/", get(index_handler))
         .route("/title.jpg", get(title_image_handler))
         .nest_service("/assets", ServeDir::new("templates/dist/assets"))
         .nest("/api", api_routes)
+        .layer(middleware::from_fn_with_state(
+            security_state,
+            security_middleware,
+        ))
         .layer(middleware::from_fn(logger_middleware))
         .layer(CorsLayer::permissive());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    println!("🚀 Listening on http://{}", addr);
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
+    tracing::info!(addr = %addr, "HTTP 服务已就绪, 开始监听");
 
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+
+    tracing::info!("服务已停止");
     Ok(())
 }
 
@@ -103,7 +281,7 @@ async fn index_handler() -> impl IntoResponse {
     match tokio::fs::read_to_string("templates/dist/index.html").await {
         Ok(content) => Html(content).into_response(),
         Err(e) => {
-            tracing::error!("Failed to read index.html: {}", e);
+            tracing::error!(error = %e, "读取首页模板失败");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to load page"
@@ -119,13 +297,21 @@ async fn title_image_handler() -> impl IntoResponse {
             content
         ).into_response(),
         Err(e) => {
-            tracing::error!("Failed to read title.jpg: {}", e);
+            tracing::error!(error = %e, "读取标题图片失败");
             (
                 StatusCode::NOT_FOUND,
                 "Image not found"
             ).into_response()
         }
     }
+}
+
+async fn health_handler() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "status": "ok",
+        "version": env!("CARGO_PKG_VERSION"),
+        "time": chrono::Local::now().to_rfc3339(),
+    }))
 }
 
 #[derive(Debug, Deserialize)]
@@ -201,83 +387,102 @@ struct ProxyQuery {
     url: String,
 }
 
-async fn proxy_video_handler(Query(params): Query<ProxyQuery>) -> impl IntoResponse {
-    tracing::info!("🎬 代理视频请求: {}", params.url);
-    
+async fn proxy_video_handler(
+    Query(params): Query<ProxyQuery>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    tracing::info!(url = %params.url, "收到视频代理请求");
+
+    // SSRF 防护：校验目标地址
+    if let Err(e) = validate_proxy_target(&params.url).await {
+        tracing::warn!(url = %params.url, reason = %e, "视频代理请求被拒绝");
+        return (
+            StatusCode::FORBIDDEN,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            e,
+        )
+            .into_response();
+    }
+
     let client = match Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        .timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(60))
         .build()
     {
         Ok(c) => c,
         Err(e) => {
-            tracing::error!("创建HTTP客户端失败: {}", e);
+            tracing::error!(error = %e, "创建 HTTP 客户端失败");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 [(header::CONTENT_TYPE, "text/plain")],
-                "创建HTTP客户端失败",
+                "创建HTTP客户端失败".to_string(),
             )
                 .into_response();
         }
     };
-    
-    let response = match client.get(&params.url).send().await {
+
+    // 转发客户端的 Range 请求头，支持视频分段拖动播放
+    let mut req = client.get(&params.url);
+    if let Some(range) = headers.get(header::RANGE).and_then(|v| v.to_str().ok()) {
+        req = req.header(reqwest::header::RANGE, range);
+    }
+
+    let response = match req.send().await {
         Ok(r) => r,
         Err(e) => {
-            tracing::error!("获取视频失败: {}", e);
+            tracing::error!(error = %e, "拉取视频资源失败");
             return (
                 StatusCode::BAD_GATEWAY,
-                [(header::CONTENT_TYPE, "text/plain")],
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
                 format!("获取视频失败: {}", e),
             )
                 .into_response();
         }
     };
 
-    // 获取响应头
+    // 透传上游状态码（200 或 206 Partial Content）
+    let status = StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::OK);
+    let mut builder = Response::builder().status(status);
+
+    // 透传关键响应头（reqwest 与 axum 的 http 版本不同，统一按字符串转发）
     let content_type = response
         .headers()
         .get(reqwest::header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
         .unwrap_or("video/mp4")
         .to_string();
+    builder = builder.header(header::CONTENT_TYPE, content_type);
 
-    let content_length = response
-        .headers()
-        .get(reqwest::header::CONTENT_LENGTH)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("0")
-        .to_string();
-
-    // 获取响应体
-    let bytes = match response.bytes().await {
-        Ok(b) => b,
-        Err(e) => {
-            tracing::error!("读取视频数据失败: {}", e);
-            return (
-                StatusCode::BAD_GATEWAY,
-                [(header::CONTENT_TYPE, "text/plain")],
-                format!("读取视频数据失败: {}", e),
-            )
-                .into_response();
-        }
-    };
-
-    tracing::info!("✅ 成功代理视频，大小: {} bytes", bytes.len());
-    
-    Response::builder()
-        .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, content_type)
-        .header(header::CONTENT_LENGTH, content_length)
-        .header(header::CACHE_CONTROL, "public, max-age=31536000")
+    if let Some(v) = response.headers().get(reqwest::header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()) {
+        builder = builder.header(header::CONTENT_LENGTH, v);
+    }
+    if let Some(v) = response.headers().get(reqwest::header::CONTENT_RANGE).and_then(|v| v.to_str().ok()) {
+        builder = builder.header(header::CONTENT_RANGE, v);
+    }
+    builder = builder
         .header(header::ACCEPT_RANGES, "bytes")
-        .body(Body::from(bytes))
+        .header(header::CACHE_CONTROL, "public, max-age=31536000");
+
+    // 流式转发响应体，避免大视频全量进内存
+    builder
+        .body(Body::from_stream(response.bytes_stream()))
         .unwrap()
         .into_response()
 }
 
 async fn proxy_image_handler(Query(params): Query<ProxyQuery>) -> impl IntoResponse {
-    tracing::debug!("🖼️ 代理图片请求: {}", params.url);
+    tracing::debug!(url = %params.url, "收到图片代理请求");
+
+    // SSRF 防护：校验目标地址
+    if let Err(e) = validate_proxy_target(&params.url).await {
+        tracing::warn!(url = %params.url, reason = %e, "图片代理请求被拒绝");
+        return (
+            StatusCode::FORBIDDEN,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            e,
+        )
+            .into_response();
+    }
 
     // 创建HTTP客户端
     let client = match Client::builder()
@@ -287,7 +492,7 @@ async fn proxy_image_handler(Query(params): Query<ProxyQuery>) -> impl IntoRespo
     {
         Ok(c) => c,
         Err(e) => {
-            tracing::error!("创建HTTP客户端失败: {}", e);
+            tracing::error!(error = %e, "创建 HTTP 客户端失败");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 [(header::CONTENT_TYPE, "text/plain")],
@@ -300,7 +505,7 @@ async fn proxy_image_handler(Query(params): Query<ProxyQuery>) -> impl IntoRespo
     let response = match client.get(&params.url).send().await {
         Ok(r) => r,
         Err(e) => {
-            tracing::error!("获取图片失败: {}", e);
+            tracing::error!(error = %e, "拉取图片资源失败");
             return (
                 StatusCode::BAD_GATEWAY,
                 [(header::CONTENT_TYPE, "text/plain")],
@@ -320,7 +525,7 @@ async fn proxy_image_handler(Query(params): Query<ProxyQuery>) -> impl IntoRespo
     let bytes = match response.bytes().await {
         Ok(b) => b,
         Err(e) => {
-            tracing::error!("读取图片数据失败: {}", e);
+            tracing::error!(error = %e, "读取图片数据失败");
             return (
                 StatusCode::BAD_GATEWAY,
                 [(header::CONTENT_TYPE, "text/plain")],
@@ -339,3 +544,23 @@ async fn proxy_image_handler(Query(params): Query<ProxyQuery>) -> impl IntoRespo
         .into_response()
 }
 
+
+#[cfg(test)]
+mod ssrf_tests {
+    use super::ip_is_blocked;
+    use std::net::IpAddr;
+
+    #[test]
+    fn blocks_private_and_reserved() {
+        for s in ["127.0.0.1", "10.0.0.1", "192.168.1.1", "172.16.0.1", "169.254.169.254", "0.0.0.0", "::1"] {
+            assert!(ip_is_blocked(s.parse::<IpAddr>().unwrap()), "应拦截 {}", s);
+        }
+    }
+
+    #[test]
+    fn allows_public() {
+        for s in ["8.8.8.8", "1.1.1.1", "114.114.114.114"] {
+            assert!(!ip_is_blocked(s.parse::<IpAddr>().unwrap()), "应放行 {}", s);
+        }
+    }
+}

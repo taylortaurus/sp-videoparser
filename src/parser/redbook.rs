@@ -63,13 +63,13 @@ impl VideoParser for RedbookParser {
             anyhow!("无法解析JSON数据: {}，已保存调试文件到 debug_redbook.html 和 debug_redbook.json", e)
         })?;
         
-        tracing::info!("✅ JSON解析成功");
+        tracing::info!("JSON 解析成功");
 
         let note_id = json.pointer("/note/currentNoteId")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow!("无法获取note ID"))?;
-        
-        tracing::debug!("Note ID: {}", note_id);
+
+        tracing::debug!(note_id = %note_id, "已获取笔记 ID");
 
         let note_path = format!("/note/noteDetailMap/{}/note", note_id);
         let note = json.pointer(&note_path)

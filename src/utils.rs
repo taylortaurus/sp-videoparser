@@ -16,21 +16,36 @@ pub fn extract_url_from_string(text: &str) -> Result<String> {
         .ok_or_else(|| anyhow!("字符串中未找到URL"))
 }
 
+/// 若设置了 PARSE_VIDEO_PROXY 环境变量，则为客户端应用代理
+fn apply_proxy(builder: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
+    match std::env::var("PARSE_VIDEO_PROXY") {
+        Ok(proxy) if !proxy.is_empty() => match reqwest::Proxy::all(&proxy) {
+            Ok(p) => builder.proxy(p),
+            Err(_) => builder,
+        },
+        _ => builder,
+    }
+}
+
 pub fn create_http_client() -> Result<Client> {
-    Client::builder()
-        .timeout(Duration::from_secs(30))
-        .user_agent(DEFAULT_USER_AGENT)
-        .build()
-        .map_err(|e| anyhow!("创建HTTP客户端失败: {}", e))
+    apply_proxy(
+        Client::builder()
+            .timeout(Duration::from_secs(30))
+            .user_agent(DEFAULT_USER_AGENT),
+    )
+    .build()
+    .map_err(|e| anyhow!("创建HTTP客户端失败: {}", e))
 }
 
 pub fn create_no_redirect_client() -> Result<Client> {
-    Client::builder()
-        .timeout(Duration::from_secs(30))
-        .user_agent(DEFAULT_USER_AGENT)
-        .redirect(Policy::none())
-        .build()
-        .map_err(|e| anyhow!("创建HTTP客户端失败: {}", e))
+    apply_proxy(
+        Client::builder()
+            .timeout(Duration::from_secs(30))
+            .user_agent(DEFAULT_USER_AGENT)
+            .redirect(Policy::none()),
+    )
+    .build()
+    .map_err(|e| anyhow!("创建HTTP客户端失败: {}", e))
 }
 
 pub fn generate_numeric_id(length: usize) -> String {

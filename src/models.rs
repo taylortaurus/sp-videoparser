@@ -72,6 +72,10 @@ pub enum VideoSource {
     HaoKan,
     RedBook,
     BiliBili,
+    CCTV,
+    QQVideo,
+    Sohu,
+    Twitter,
 }
 
 impl VideoSource {
@@ -100,6 +104,10 @@ impl VideoSource {
             "haokan" => Some(Self::HaoKan),
             "redbook" | "xiaohongshu" => Some(Self::RedBook),
             "bilibili" => Some(Self::BiliBili),
+            "cctv" => Some(Self::CCTV),
+            "qqvideo" => Some(Self::QQVideo),
+            "sohu" => Some(Self::Sohu),
+            "twitter" => Some(Self::Twitter),
             _ => None,
         }
     }
@@ -128,9 +136,14 @@ impl VideoSource {
             Self::HaoKan => "haokan",
             Self::RedBook => "redbook",
             Self::BiliBili => "bilibili",
+            Self::CCTV => "cctv",
+            Self::QQVideo => "qqvideo",
+            Self::Sohu => "sohu",
+            Self::Twitter => "twitter",
         }
     }
-    
+
+    #[allow(dead_code)] // 公共访问器：提供平台中文名，供 CLI/调用方使用
     pub fn display_name(&self) -> &'static str {
         match self {
             Self::DouYin => "抖音",
@@ -155,9 +168,13 @@ impl VideoSource {
             Self::HaoKan => "好看视频",
             Self::RedBook => "小红书",
             Self::BiliBili => "哔哩哔哩",
+            Self::CCTV => "央视网",
+            Self::QQVideo => "腾讯视频",
+            Self::Sohu => "搜狐视频",
+            Self::Twitter => "Twitter",
         }
     }
-    
+
     pub fn share_url_domains(&self) -> Vec<&'static str> {
         match self {
             Self::DouYin => vec!["v.douyin.com", "www.iesdouyin.com", "www.douyin.com"],
@@ -182,6 +199,10 @@ impl VideoSource {
             Self::HaoKan => vec!["haokan.baidu.com", "haokan.hao123.com"],
             Self::RedBook => vec!["www.xiaohongshu.com", "xhslink.com"],
             Self::BiliBili => vec!["bilibili.com", "b23.tv"],
+            Self::CCTV => vec!["tv.cctv.cn", "tv.cctv.com"],
+            Self::QQVideo => vec!["v.qq.com"],
+            Self::Sohu => vec!["tv.sohu.com", "my.tv.sohu.com"],
+            Self::Twitter => vec!["x.com", "twitter.com", "t.co"],
         }
     }
 }

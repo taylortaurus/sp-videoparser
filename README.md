@@ -1,812 +1,757 @@
 <div align="center">
 
-# 🎬 Rust Video Parser
+# Rust Video Parser
 
-**现代化全平台视频解析工具 - 极致性能 · 炫酷UI · 开箱即用**
+**企业级全平台短视频解析服务 —— 高性能 · 安全可控 · 生产就绪**
 
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org/)
-[![Vue](https://img.shields.io/badge/vue-3.4%2B-brightgreen.svg?style=flat-square&logo=vue.js)](https://vuejs.org/)
-[![Vuetify](https://img.shields.io/badge/vuetify-3.5-blue.svg?style=flat-square&logo=vuetify)](https://vuetifyjs.com/)
-[![Platforms](https://img.shields.io/badge/platforms-22-success.svg?style=flat-square)](#-支持平台)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Docker](https://img.shields.io/badge/docker-ready-blue.svg?style=flat-square&logo=docker)](https://hub.docker.com/r/eginner01/rust_video_parser)
-[![Docker Pulls](https://img.shields.io/docker/pulls/eginner01/rust_video_parser?style=flat-square&logo=docker)](https://hub.docker.com/r/eginner01/rust_video_parser)
-[![Docker Image Size](https://img.shields.io/docker/image-size/eginner01/rust_video_parser/latest?style=flat-square&logo=docker)](https://hub.docker.com/r/eginner01/rust_video_parser)
-[![Version](https://img.shields.io/badge/version-2.1.1-brightgreen.svg?style=flat-square)](#)
+[![Rust](https://img.shields.io/badge/Rust-1.75%2B-000000?style=flat-square&logo=rust)](https://www.rust-lang.org/)
+[![Axum](https://img.shields.io/badge/Axum-0.7-1f6feb?style=flat-square)](https://github.com/tokio-rs/axum)
+[![Vue](https://img.shields.io/badge/Vue-3.4-2f3b4c?style=flat-square&logo=vue.js)](https://vuejs.org/)
+[![Platforms](https://img.shields.io/badge/Platforms-26-2ea043?style=flat-square)](#平台支持矩阵)
+[![Docker](https://img.shields.io/badge/Docker-Ready-1f6feb?style=flat-square&logo=docker)](https://hub.docker.com/r/eginner01/rust_video_parser)
+[![License](https://img.shields.io/badge/License-MIT-6e7681?style=flat-square)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-2.1.0-2ea043?style=flat-square)](#)
 
-[✨ 功能特性](#-功能特性) • [🚀 快速开始](#-快速开始) • [📸 截图展示](#-截图展示) • [🔧 API文档](#-api-文档) • [🐳 Docker部署](#-docker部署)
+[概述](#概述) · [架构](#技术架构) · [快速开始](#快速开始) · [配置](#配置参考) · [命令行](#命令行接口) · [HTTP API](#http-api-参考) · [安全](#安全特性) · [可观测性](#可观测性与日志)
 
 </div>
 
 ---
 
-## 📖 项目简介
+## 概述
 
-**Rust Video Parser** 是一个现代化的全平台短视频解析工具，采用 **Rust + Vue 3 + Vuetify 3** 技术栈打造。支持 **22个** 主流视频平台的无水印解析，提供炫酷的科幻主题界面和极致的用户体验。
+Rust Video Parser 是一套面向生产环境的全平台短视频解析服务，基于 **Rust + Axum** 异步技术栈构建，前端采用 **Vue 3 + Vuetify 3**。系统提供 **26 个**主流平台的无水印解析能力，覆盖视频、封面、图集、背景音乐及作者信息提取，并内置访问控制、限流、SSRF 防护、流式代理与结构化可观测性，可直接部署于企业内网或公有云。
 
-### 🌟 核心亮点
+本项目为 Go 版 [parse-video](https://github.com/wujunwei928/parse-video) 的 Rust 重构实现，在保持解析能力对齐的同时，强化了内存安全、运行时性能与运维可观测性。
 
-- 🚀 **极致性能** - Rust 异步运行时，毫秒级响应
-- 🎨 **现代UI** - 6种精美主题，Material Design 3
-- 📦 **一键部署** - Docker镜像仅50MB，5秒启动
-- 🔒 **安全可靠** - 内存安全，完善错误处理
-- 📱 **全端适配** - 响应式设计，完美支持移动端
-- 🎭 **丰富动画** - GSAP + Animate.css 流畅动效
+### 核心能力
 
----
-
-## ✨ 功能特性
-
-### 🎯 视频解析
-
-<table>
-<tr>
-<td width="50%">
-
-**支持平台 (22个)**
-- 🎵 抖音 (Douyin)
-- ⚡ 快手 (Kuaishou)
-- 📺 哔哩哔哩 (Bilibili)
-- 📖 小红书 (RedBook)
-- 🐦 微博 (Weibo)
-- 🍉 西瓜视频 (Xigua)
-- 📱 微视 (Weishi)
-- 🌋 火山 (Huoshan)
-- 🦐 皮皮虾 (PiPiXia)
-- 👉 最右 (ZuiYou)
-- 🌿 绿洲 (LvZhou)
-- 📹 度小视 (QuanMin)
-- 🍐 梨视频 (LiShiPin)
-- 😄 皮皮搞笑 (PiPiGaoXiao)
-- 🐯 虎牙 (Huya)
-- 🅰️ AcFun
-- 🎭 逗拍 (DouPai)
-- 💄 美拍 (MeiPai)
-- 🎤 全民K歌 (QuanMinKGe)
-- 🏠 六间房 (SixRoom)
-- 🎬 新片场 (XinPianChang)
-- 👀 好看视频 (Haokan)
-
-</td>
-<td width="50%">
-
-**解析能力**
-- 📹 视频无水印下载
-- 🖼️ 封面图片提取 (cover.jpg)
-- 📸 图片集批量下载 (image_1.jpg...)
-- 🎵 背景音乐提取
-- 👤 作者信息获取
-- 📝 标题描述解析
-
-</td>
-</tr>
-</table>
-
-### 🎨 用户界面
-
-<table>
-<tr>
-<td width="33%">
-
-**6种主题风格**
-- 🤖 赛博科幻
-- 💡 霓虹夜光
-- 🪟 玻璃态
-- 💼 商业专业
-- 🌙 暗黑专业
-- ⚪ 极简主义
-
-</td>
-<td width="33%">
-
-**在线功能**
-- ▶️ 视频在线播放
-- 🔽 一键下载视频
-- 🖼️ 封面下载
-- 📸 批量图片下载
-- ☑️ 选择性下载
-- 📋 链接复制
-
-</td>
-<td width="33%">
-
-**交互体验**
-- ✨ 流畅动画效果
-- 🎭 Logo旋转特效
-- 💫 粒子背景动画
-- 🎨 主题平滑切换
-- 📱 触摸手势支持
-- ⌨️ 键盘快捷键
-
-</td>
-</tr>
-</table>
-
-### 🔧 技术特性
-
-- **后端架构**
-  - 🦀 Rust + Axum 异步Web框架
-  - ⚡ Tokio 异步运行时
-  - 🔄 Reqwest HTTP客户端
-  - 📊 结构化日志系统
-  
-- **前端架构**
-  - 🖼️ Vue 3 + Composition API
-  - 🎨 Vuetify 3 Material Design
-  - 📦 Vite 极速构建工具
-  - 🎭 GSAP 专业动画引擎
-
-- **部署运维**
-  - 🐳 Docker 多阶段构建
-  - 📦 Alpine Linux 精简镜像
-  - 🔒 非root用户运行
-  - 💚 健康检查支持
+| 维度 | 说明 |
+| --- | --- |
+| 解析能力 | 26 个平台无水印解析，支持视频 / 图集 / 封面 / 音乐 / 作者信息 |
+| 运行性能 | 基于 Tokio 异步运行时，单进程高并发，毫秒级解析响应 |
+| 资源占用 | 发布镜像约 50 MB（Alpine + 静态链接），秒级冷启动 |
+| 访问控制 | 可选 Basic 认证、按 IP 限流、CORS 策略 |
+| 网络安全 | 代理接口 SSRF 防护，拦截内网 / 保留 / 链路本地地址 |
+| 流式传输 | 视频代理支持 HTTP Range 透传与流式转发，避免大文件占用内存 |
+| 可观测性 | 结构化日志（本地时区时间戳 + 级别 + 模块 + 键值字段）、健康检查端点 |
+| 运维友好 | 环境变量集中配置、出站代理、优雅关闭、非 root 容器运行 |
 
 ---
 
-## 🚀 快速开始
+## 技术架构
 
-### 方式一：Docker Hub 镜像（⭐ 最快部署）
+### 分层架构
 
-**无需下载代码，一行命令启动：**
+```mermaid
+flowchart TB
+    Client["客户端 / 浏览器 / CLI"]
+
+    subgraph Service["Axum HTTP 服务"]
+        direction TB
+        subgraph MW["中间件链"]
+            direction LR
+            CORS["CORS"] --> LOG["访问日志"] --> RL["限流"] --> AUTH["Basic 认证"]
+        end
+        subgraph Routes["路由层"]
+            direction LR
+            UI["Web UI"]
+            API["业务 API"]
+            PROXY["资源代理"]
+            HEALTH["健康检查"]
+        end
+        MW --> Routes
+    end
+
+    subgraph Parser["解析器层 (VideoParser)"]
+        direction TB
+        ID["域名识别"] --> Factory["工厂分发"]
+        Factory --> P1["douyin"]
+        Factory --> P2["bilibili"]
+        Factory --> P3["... 26 个平台"]
+    end
+
+    HTTP["Reqwest 异步客户端<br/>(可选出站代理)"]
+    Upstream["上游视频平台"]
+
+    Client ==> Service
+    API ==> Parser
+    PROXY ==> HTTP
+    Parser ==> HTTP
+    HTTP ==> Upstream
+
+    classDef svc fill:#1f6feb22,stroke:#1f6feb,stroke-width:1px;
+    classDef parser fill:#2ea04322,stroke:#2ea043,stroke-width:1px;
+    classDef ext fill:#6e768122,stroke:#6e7681,stroke-width:1px;
+    class Service,MW,Routes,CORS,LOG,RL,AUTH,UI,API,PROXY,HEALTH svc;
+    class Parser,ID,Factory,P1,P2,P3 parser;
+    class HTTP,Upstream,Client ext;
+```
+
+### 模块依赖
+
+```mermaid
+flowchart LR
+    main["main.rs<br/>CLI / 日志初始化"]
+    server["server.rs<br/>HTTP / 中间件 / 代理"]
+    download["download.rs<br/>媒体下载"]
+    parser["parser/mod.rs<br/>识别 + 分发"]
+    impls["parser/*.rs<br/>26 个平台"]
+    models["models.rs<br/>数据模型 / 枚举"]
+    utils["utils.rs<br/>HTTP 客户端 / 工具"]
+
+    main --> server
+    main --> download
+    main --> parser
+    server --> parser
+    server --> models
+    download --> parser
+    download --> utils
+    parser --> impls
+    impls --> models
+    impls --> utils
+    server --> models
+    parser --> models
+```
+
+### 技术栈
+
+| 层 | 组件 | 版本 | 职责 |
+| --- | --- | --- | --- |
+| 后端 | Rust | 1.75+ | 系统级语言，内存安全 |
+| 后端 | Axum | 0.7 | 异步 Web 框架 |
+| 后端 | Tokio | 1.x | 异步运行时 |
+| 后端 | Reqwest | 0.11 | HTTP 客户端（含流式） |
+| 后端 | Scraper / Regex | 0.18 / 1.10 | HTML 与文本提取 |
+| 后端 | Tracing | 0.1 | 结构化日志 |
+| 前端 | Vue | 3.4 | 渐进式前端框架 |
+| 前端 | Vuetify | 3.5 | Material Design 组件库 |
+| 前端 | Vite | 5.0 | 构建工具 |
+| 部署 | Docker | 多阶段 | 前端构建 + Rust 构建 + Alpine 运行时 |
+
+### 请求处理流程
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as 客户端
+    participant M as 中间件链
+    participant H as 路由处理器
+    participant P as 解析器层
+    participant U as 上游平台
+
+    C->>M: HTTP 请求
+    M->>M: CORS / 记录访问日志
+    M->>M: 限流校验 (RATE_LIMIT_RPM)
+    alt 超出限额
+        M-->>C: 429 请求过于频繁
+    else 通过
+        M->>M: Basic 认证校验
+        alt 认证失败
+            M-->>C: 401 需要认证
+        else 通过
+            M->>H: 转发请求
+            H->>P: 识别平台并解析
+            P->>U: 拉取分享页 / 调用接口
+            U-->>P: 返回数据
+            P-->>H: VideoParseInfo
+            H-->>C: 200 JSON 响应
+        end
+    end
+```
+
+### 解析与分发
+
+```mermaid
+flowchart LR
+    A["分享文本"] --> B["正则提取 URL"]
+    B --> C{"域名匹配<br/>identify_video_source"}
+    C -->|命中| D["工厂分发<br/>get_parser"]
+    C -->|未命中| E["返回: 无法识别平台"]
+    D --> F["VideoParser::parse_share_url"]
+    F --> G{"链接类型"}
+    G -->|短链| H["跟随重定向<br/>提取视频 ID"]
+    G -->|长链| I["直接提取视频 ID"]
+    H --> J["调用平台接口 / 解析页面"]
+    I --> J
+    J --> K["归一化为 VideoParseInfo"]
+    K --> L["统一响应 HttpResponse"]
+```
+
+---
+
+## 快速开始
+
+### 部署拓扑
+
+```mermaid
+flowchart LR
+    User["用户"] --> LB["Nginx / 负载均衡<br/>TLS 终止"]
+    LB --> S1["容器实例 :8080"]
+    LB --> S2["容器实例 :8080"]
+    S1 --> Up["上游视频平台"]
+    S2 --> Up
+    Probe["编排健康探针"] -. GET /api/health .-> S1
+    Probe -. GET /api/health .-> S2
+
+    classDef edge fill:#1f6feb22,stroke:#1f6feb;
+    classDef app fill:#2ea04322,stroke:#2ea043;
+    class LB,Probe edge;
+    class S1,S2 app;
+```
+
+### 方式一：Docker 镜像（推荐）
 
 ```bash
-# 直接拉取并运行镜像
 docker run -d \
   --name rust_video_parser \
   -p 8080:8080 \
   -e RUST_LOG=info \
+  -e RATE_LIMIT_RPM=60 \
   --restart unless-stopped \
   eginner01/rust_video_parser:latest
-
-# 访问应用
-open http://localhost:8080
 ```
 
-**或使用 docker-compose：**
+服务启动后访问 `http://localhost:8080`。
+
+### 方式二：Docker Compose
+
+仓库根目录已提供 `docker-compose.yml`，包含端口映射、资源限额与健康检查：
 
 ```bash
-# 创建 docker-compose.yml
-cat > docker-compose.yml <<EOF
-version: '3.8'
-services:
-  rust_video_parser:
-    image: eginner01/rust_video_parser:latest
-    container_name: rust_video_parser
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - RUST_LOG=info
-      - SERVER_PORT=8080
-EOF
-
-# 启动服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
+docker-compose up -d        # 启动
+docker-compose ps           # 查看状态
+docker-compose logs -f      # 跟踪日志
+docker-compose down         # 停止并清理
 ```
 
-**就这么简单！🎉 镜像大小仅 ~50MB，启动只需 5 秒！**
+### 方式三：源码构建
 
-### 方式二：本地构建部署
-
-```bash
-# 克隆项目
-git clone https://github.com/eginner01/rust_video_parser.git
-cd rust_video_parser
-
-# 一键启动（使用项目内的 docker-compose.yml）
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-
-# 访问应用
-open http://localhost:8080
-```
-
-### 方式三：源码编译
-
-#### 前置要求
-
-- Rust 1.75+
-- Node.js 18+
-- npm 8+
-
-#### 后端开发
+前置依赖：Rust 1.75+、Node.js 18+、npm 8+。
 
 ```bash
-# 编译并运行
-cargo build --release
-./target/release/rust_video_parser
-
-# 或直接运行
-cargo run --release
-```
-
-后端运行在：http://localhost:8080
-
-#### 前端开发
-
-```bash
+# 1. 构建前端静态资源
 cd frontend
+npm ci
+npx vite build --outDir ../templates/dist
+cd ..
 
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
+# 2. 构建并启动后端
+cargo build --release
+./target/release/rust_video_parser serve --port 8080
 ```
 
-前端运行在：http://localhost:3000
+---
+
+## 配置参考
+
+所有运行参数通过环境变量集中管理，亦可写入项目根目录的 `.env` 文件（启动时自动加载）。
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `SERVER_PORT` | `8080` | HTTP 监听端口，等价于 `--port` 参数 |
+| `RUST_LOG` | `rust_video_parser=info,tower_http=warn` | 日志级别过滤（遵循 `tracing` EnvFilter 语法） |
+| `RATE_LIMIT_RPM` | `60` | 单 IP 每分钟请求上限，健康检查与静态资源豁免 |
+| `PARSE_VIDEO_USERNAME` | 空 | Basic 认证用户名；与密码同时设置时启用认证 |
+| `PARSE_VIDEO_PASSWORD` | 空 | Basic 认证密码 |
+| `PARSE_VIDEO_PROXY` | 空 | 出站代理地址（如 `http://127.0.0.1:7890`），作用于全部解析与下载请求 |
+
+`.env` 示例：
+
+```dotenv
+SERVER_PORT=8080
+RUST_LOG=rust_video_parser=info,tower_http=warn
+RATE_LIMIT_RPM=120
+PARSE_VIDEO_USERNAME=admin
+PARSE_VIDEO_PASSWORD=change-me
+PARSE_VIDEO_PROXY=http://127.0.0.1:7890
+```
 
 ---
 
-### 键盘快捷键
+## 命令行接口
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Enter` | 提交解析 |
-| `Space` | 播放/暂停（播放器聚焦时） |
-| `F` | 全屏播放 |
-| `M` | 静音/取消静音 |
+```
+rust_video_parser [OPTIONS] [COMMAND]
+```
+
+```mermaid
+flowchart LR
+    Root["rust_video_parser"]
+    Root --> S["serve --port"]
+    Root --> P["parse &lt;URL&gt; --json"]
+    Root --> I["id &lt;VIDEO_ID&gt; --source --json"]
+    Root --> D["download &lt;URL&gt; --output"]
+    Root --> L["platforms"]
+    Root --> V["version"]
+    S --> S1["启动 HTTP 服务（缺省命令）"]
+    P --> P1["按分享链接解析"]
+    I --> I1["按平台+视频ID解析"]
+    D --> D1["下载视频/图集/封面/音乐"]
+    L --> L1["列出 26 个平台及域名"]
+    V --> V1["输出版本号"]
+```
+
+CLI 覆盖服务端的全部解析能力，`parse` / `id` 支持 `--json` 输出（结构与 HTTP API 响应完全一致，便于脚本集成）。资源代理、Web UI、限流与认证属于 HTTP 运行时能力，仅在 `serve` 模式下提供。
+
+| 命令 | 对应 HTTP 接口 | 说明 |
+| --- | --- | --- |
+| `serve [--port <PORT>]` | — | 启动 HTTP 服务（缺省命令，直接运行二进制亦默认启动服务） |
+| `parse <URL> [--json]` | `/api/video/share/url/parse` | 按分享链接解析，输出标题、作者、地址 |
+| `id <VIDEO_ID> --source <SOURCE> [--json]` | `/api/video/id/parse` | 按平台标识与视频 ID 解析 |
+| `download <URL> [--output <DIR>]` | — | 解析并下载视频 / 图集 / 封面 / 音乐（默认 `downloads`） |
+| `platforms` | `/api/platforms` | 列出全部受支持平台及其域名 |
+| `version` | — | 输出版本号 |
+
+> 二进制位置：源码构建后位于 `./target/release/rust_video_parser`；容器内命令名为 `rust_video_parser`（可经 `docker exec` 调用）。下文示例统一以 `rust_video_parser` 表示。
+
+### 查看帮助
+
+```console
+$ rust_video_parser --help
+短视频去水印解析工具 - 支持26个平台
+
+Usage: rust_video_parser [OPTIONS] [COMMAND]
+
+Commands:
+  serve      启动HTTP服务器
+  parse      解析单个分享链接并输出结果
+  id         根据平台标识与视频 ID 解析（对应 HTTP 接口 /api/video/id/parse）
+  download   解析并下载视频/图集到本地目录
+  platforms  列出所有受支持的平台
+  version    显示版本信息
+  help       Print this message or the help of the given subcommand(s)
+
+Options:
+  -p, --port <PORT>  HTTP服务器端口（可由环境变量 SERVER_PORT 指定） [env: SERVER_PORT=] [default: 8080]
+  -h, --help         Print help
+  -V, --version      Print version
+
+# 查看子命令帮助
+$ rust_video_parser id --help
+```
+
+### serve —— 启动 HTTP 服务
+
+```console
+$ rust_video_parser serve --port 8080
+2026-06-15T23:38:34.115+08:00  INFO rust_video_parser::server: 视频解析服务正在启动 version="2.1.0"
+2026-06-15T23:38:34.115+08:00  INFO rust_video_parser::server: 限流策略已配置 rate_limit_rpm=60
+2026-06-15T23:38:34.115+08:00  INFO rust_video_parser::server: Basic 认证策略已配置 enabled=false
+2026-06-15T23:38:34.116+08:00  INFO rust_video_parser::server: HTTP 服务已就绪, 开始监听 addr=0.0.0.0:8080
+```
+
+```console
+# 经环境变量指定端口与认证（等价于 --port）
+$ SERVER_PORT=9000 PARSE_VIDEO_USERNAME=admin PARSE_VIDEO_PASSWORD=secret rust_video_parser serve
+```
+
+### parse —— 解析单条链接
+
+```console
+$ rust_video_parser parse "https://v.douyin.com/xxxxxx/"
+正在解析视频...
+提取到链接: https://v.douyin.com/xxxxxx/
+解析成功
+标题: 示例视频标题
+作者: 作者昵称 (MS4wLjABAAAA...)
+视频地址: https://v3-web.douyinvod.com/...
+封面地址: https://p3-sign.douyinpic.com/...
+```
+
+加 `--json` 输出与 HTTP API 完全一致的响应结构，适合脚本处理（可配合 `jq`）：
+
+```console
+$ rust_video_parser parse "https://v.douyin.com/xxxxxx/" --json
+{
+  "code": 200,
+  "msg": "解析成功",
+  "data": {
+    "author": { "uid": "MS4wLjABAAAA...", "name": "作者昵称", "avatar": "https://..." },
+    "title": "示例视频标题",
+    "video_url": "https://v3-web.douyinvod.com/...",
+    "cover_url": "https://p3-sign.douyinpic.com/..."
+  }
+}
+
+# 提取直链
+$ rust_video_parser parse "https://v.douyin.com/xxxxxx/" --json | jq -r '.data.video_url'
+```
+
+> 入参可直接粘贴含链接的整段分享文案，程序会自动用正则提取其中的 URL。
+
+### id —— 按平台与视频 ID 解析
+
+对应 HTTP 接口 `/api/video/id/parse`，需用 `--source` 指定平台标识（见 `platforms`）；部分平台不支持按 ID 解析。
+
+```console
+$ rust_video_parser id 7234567890123456789 --source douyin
+正在解析视频...
+解析成功
+标题: 示例视频标题
+作者: 作者昵称 (MS4wLjABAAAA...)
+视频地址: https://v3-web.douyinvod.com/...
+
+# JSON 输出（错误同样以统一结构返回）
+$ rust_video_parser id 123 --source notexist --json
+{
+  "code": 201,
+  "msg": "不支持的平台: notexist（可用 platforms 命令查看支持列表）"
+}
+```
+
+### download —— 解析并下载到本地
+
+```console
+$ rust_video_parser download "https://v.douyin.com/xxxxxx/" --output ./media
+正在解析视频...
+解析成功: 示例视频标题
+2026-06-15T23:40:10.231+08:00  INFO rust_video_parser::download: 开始下载视频 file="示例视频标题.mp4"
+2026-06-15T23:40:12.880+08:00  INFO rust_video_parser::download: 开始下载封面 file="示例视频标题_cover.jpg"
+2026-06-15T23:40:13.012+08:00  INFO rust_video_parser::download: 媒体下载完成 count=2 dir="./media"
+```
+
+产物命名规则：视频 `<标题>.mp4`、封面 `<标题>_cover.jpg`、音乐 `<标题>_music.mp3`、图集 `<标题>_001.jpg`（含 LivePhoto 时追加 `_001_live.mp4`）。
+
+### platforms —— 列出受支持平台
+
+```console
+$ rust_video_parser platforms
+受支持的视频平台:
+
+ 1. 抖音 (douyin)
+    域名: v.douyin.com, www.iesdouyin.com, www.douyin.com
+ 2. 快手 (kuaishou)
+    域名: v.kuaishou.com, www.kuaishou.com
+ ...
+26. Twitter (twitter)
+    域名: x.com, twitter.com, t.co
+
+合计 26 个平台
+```
+
+### version —— 输出版本
+
+```console
+$ rust_video_parser version
+rust_video_parser 2.1.0
+```
+
+### 在容器中调用
+
+```console
+# 解析（容器已运行时）
+$ docker exec rust_video_parser rust_video_parser parse "https://v.douyin.com/xxxxxx/"
+
+# 下载到容器内挂载目录
+$ docker exec rust_video_parser rust_video_parser download "https://..." --output /app/downloads
+```
 
 ---
 
-## 🔧 API 文档
+## HTTP API 参考
 
-### 基础信息
+- Base URL：`http://<host>:<port>`
+- 响应类型：`application/json`（代理接口除外）
+- 统一响应结构：`{ "code": <int>, "msg": <string>, "data": <object|null> }`，成功 `code=200`，失败 `code=201`
 
-- **Base URL**: `http://localhost:8080`
-- **Content-Type**: `application/json`
-- **响应格式**: JSON
-
-### 1. 解析视频链接
+### 健康检查
 
 ```http
-GET /api/video/share/url/parse?url={video_url}
+GET /api/health
 ```
 
-**请求示例**
-
-```bash
-curl "http://localhost:8080/api/video/share/url/parse?url=https://v.douyin.com/xxxxxx/"
+```json
+{ "status": "ok", "version": "2.1.0", "time": "2026-06-15T23:38:36+08:00" }
 ```
 
-**响应示例**
+### 解析分享链接
+
+```http
+GET /api/video/share/url/parse?url=<分享链接或含链接的文本>
+```
 
 ```json
 {
   "code": 200,
   "msg": "解析成功",
   "data": {
-    "author": {
-      "uid": "MS4wLjABAAAA...",
-      "name": "作者昵称",
-      "avatar": "https://..."
-    },
+    "author": { "uid": "...", "name": "作者昵称", "avatar": "https://..." },
     "title": "视频标题",
-    "video_url": "https://v3-web.douyinvod.com/...",
+    "video_url": "https://...",
     "music_url": "https://...",
     "cover_url": "https://...",
-    "images": [
-      {
-        "url": "https://...",
-        "live_photo_url": "https://..."
-      }
-    ]
+    "images": [ { "url": "https://...", "live_photo_url": "https://..." } ]
   }
 }
 ```
 
-### 2. 视频代理
+### 按平台与视频 ID 解析
 
 ```http
-GET /api/proxy/video?url={video_url}
+GET /api/video/id/parse?source=<平台标识>&video_id=<视频ID>
 ```
 
-用于绕过CORS限制，代理视频资源。
+`source` 取值见[平台支持矩阵](#平台支持矩阵)的「标识」列，部分平台不支持按 ID 解析。
 
-**请求示例**
-
-```bash
-curl "http://localhost:8080/api/proxy/video?url=https://..."
-```
-
-### 3. 图片代理
-
-```http
-GET /api/proxy/image?url={image_url}
-```
-
-用于绕过CORS限制，代理图片资源。
-
-**请求示例**
-
-```bash
-curl "http://localhost:8080/api/proxy/image?url=https://..."
-```
-
-### 4. 支持平台列表
+### 平台列表
 
 ```http
 GET /api/platforms
 ```
 
-返回所有支持的平台信息。
+### 资源代理
 
-**请求示例**
-
-```bash
-curl "http://localhost:8080/api/platforms"
+```http
+GET /api/proxy/video?url=<视频地址>      # 支持 Range 透传与流式转发
+GET /api/proxy/image?url=<图片地址>
 ```
 
-### 更多API文档
+代理接口用于规避防盗链与跨域限制，并内置 SSRF 校验（详见[安全特性](#安全特性)）。
 
-详见项目内的 API 文档说明。
+视频代理的 Range 透传与流式转发时序如下：
 
----
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Player as 播放器
+    participant Proxy as 代理接口
+    participant SSRF as SSRF 校验
+    participant CDN as 视频源 CDN
 
-## 🐳 Docker 部署
-
-### 方式 A：使用 Docker Hub 镜像（推荐）
-
-**1. 直接运行**
-
-```bash
-# 拉取最新镜像
-docker pull eginner01/rust_video_parser:latest
-
-# 运行容器
-docker run -d \
-  --name rust_video_parser \
-  -p 8080:8080 \
-  -e RUST_LOG=info \
-  -e SERVER_PORT=8080 \
-  --restart unless-stopped \
-  eginner01/rust_video_parser:latest
-
-# 查看日志
-docker logs -f rust_video_parser
-
-# 停止容器
-docker stop rust_video_parser
-
-# 删除容器
-docker rm rust_video_parser
+    Player->>Proxy: GET /api/proxy/video (Range: bytes=0-)
+    Proxy->>SSRF: 校验目标地址
+    alt 命中内网/保留地址
+        SSRF-->>Proxy: 拒绝
+        Proxy-->>Player: 403 Forbidden
+    else 通过
+        SSRF-->>Proxy: 放行
+        Proxy->>CDN: GET (透传 Range)
+        CDN-->>Proxy: 206 Partial Content (流)
+        Proxy-->>Player: 206 + Content-Range (边收边转, 不落内存)
+    end
 ```
 
-**2. 使用 docker-compose**
+### 数据模型
 
-创建 `docker-compose.yml`：
+响应体由统一包装 `HttpResponse<T>` 与解析结果 `VideoParseInfo` 构成，作者信息内联，图集为一对多：
 
-```yaml
-version: '3.8'
+```mermaid
+erDiagram
+    HttpResponse ||--o| VideoParseInfo : "data"
+    VideoParseInfo ||--|| Author : "author"
+    VideoParseInfo ||--o{ ImgInfo : "images"
 
-services:
-  rust_video_parser:
-    image: eginner01/rust_video_parser:latest
-    container_name: rust_video_parser
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - RUST_LOG=info
-      - SERVER_PORT=8080
-    volumes:
-      - ./logs:/app/logs
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-```
-
-启动命令：
-
-```bash
-# 启动服务
-docker-compose up -d
-
-# 查看状态
-docker-compose ps
-
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
-```
-
-**3. 指定版本**
-
-```bash
-# 使用特定版本
-docker pull eginner01/rust_video_parser:2.1.1
-docker run -d \
-  --name rust_video_parser \
-  -p 8080:8080 \
-  eginner01/rust_video_parser:2.1.1
-```
-
-### 方式 B：自定义构建
-
-如果需要修改代码或自定义构建：
-
-```bash
-# 克隆项目
-git clone https://github.com/eginner01/rust_video_parser.git
-cd rust_video_parser
-
-# 构建镜像
-docker build -t rust_video_parser:custom .
-
-# 查看镜像大小
-docker images rust_video_parser
-
-# 运行自定义镜像
-docker run -d \
-  --name rust_video_parser \
-  -p 8080:8080 \
-  -e RUST_LOG=info \
-  --restart unless-stopped \
-  rust_video_parser:custom
-```
-
-### 多架构支持
-
-Docker Hub 镜像支持多架构：
-
-```bash
-# 支持的架构
-- linux/amd64 (x86_64)
-- linux/arm64 (ARM64)
-
-# 自动选择适合的架构
-docker pull eginner01/rust_video_parser:latest
-```
-
-### Nginx 反向代理
-
-```nginx
-server {
-    listen 80;
-    server_name video.example.com;
-
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    HttpResponse {
+        i32 code "200 成功 / 201 失败"
+        string msg "提示信息"
+        object data "可空, 解析结果"
     }
-}
+    VideoParseInfo {
+        string title "标题/描述"
+        string video_url "可空, 视频地址"
+        string music_url "可空, 背景音乐"
+        string cover_url "可空, 封面地址"
+        array images "图集, 可空"
+    }
+    Author {
+        string uid "作者 ID"
+        string name "作者昵称"
+        string avatar "头像地址"
+    }
+    ImgInfo {
+        string url "图片地址"
+        string live_photo_url "可空, LivePhoto 视频"
+    }
 ```
 
 ---
 
-## 🎯 支持平台
+## 安全特性
 
-<div align="center">
+| 能力 | 说明 |
+| --- | --- |
+| SSRF 防护 | 代理接口仅放行 `http/https`，经 DNS 解析后拦截环回、私有（10/172.16/192.168）、链路本地（169.254，含云元数据 `169.254.169.254`）、未指定、组播及 IPv6 ULA/链路本地地址 |
+| Basic 认证 | 配置 `PARSE_VIDEO_USERNAME` 与 `PARSE_VIDEO_PASSWORD` 后启用；首页、健康检查、平台列表、静态资源豁免 |
+| 速率限制 | 按客户端 IP 固定窗口限流（`RATE_LIMIT_RPM`），超限返回 `429` |
+| 出站代理 | 通过 `PARSE_VIDEO_PROXY` 统一为解析与下载请求配置代理出口 |
+| 优雅关闭 | 监听中断信号，停止接收新连接并完成在途请求后退出 |
+| 最小权限 | 容器以非 root 用户运行，发布镜像不含构建工具链 |
 
-### 主流平台（共22个）
+### SSRF 校验决策
 
-| 序号 | 平台 | 标识 | 视频 | 图集 | 封面 | 说明 |
-|:----:|------|------|:----:|:----:|:----:|------|
-| 1 | 🎵 抖音 | `douyin` | ✅ | ✅ | ✅ | Douyin/TikTok |
-| 2 | ⚡ 快手 | `kuaishou` | ✅ | ✅ | ✅ | Kuaishou |
-| 3 | 📺 哔哩哔哩 | `bilibili` | ✅ | ❌ | ✅ | Bilibili |
-| 4 | 📖 小红书 | `redbook` | ✅ | ✅ | ✅ | RedBook/XiaoHongShu |
-| 5 | 🐦 微博 | `weibo` | ✅ | ✅ | ✅ | Weibo |
-| 6 | 🍉 西瓜视频 | `xigua` | ✅ | ❌ | ✅ | Xigua Video |
-| 7 | 🦐 皮皮虾 | `pipixia` | ✅ | ❌ | ✅ | PiPiXia |
-| 8 | 📱 微视 | `weishi` | ✅ | ❌ | ✅ | Weishi |
-| 9 | 🌋 火山 | `huoshan` | ✅ | ❌ | ✅ | Huoshan |
-| 10 | 👉 最右 | `zuiyou` | ✅ | ❌ | ✅ | ZuiYou |
-| 11 | 🌿 绿洲 | `lvzhou` | ✅ | ❌ | ✅ | LvZhou |
-| 12 | 📹 度小视 | `quanmin` | ✅ | ❌ | ✅ | QuanMin |
-| 13 | 🍐 梨视频 | `lishipin` | ✅ | ❌ | ✅ | LiShiPin |
-| 14 | 😄 皮皮搞笑 | `pipigaoxiao` | ✅ | ❌ | ✅ | PiPiGaoXiao |
-| 15 | 🐯 虎牙 | `huya` | ✅ | ❌ | ✅ | Huya |
-| 16 | 🅰️ AcFun | `acfun` | ✅ | ❌ | ✅ | AcFun |
-| 17 | 🎭 逗拍 | `doupai` | ✅ | ❌ | ✅ | DouPai |
-| 18 | 💄 美拍 | `meipai` | ✅ | ❌ | ✅ | MeiPai |
-| 19 | 🎤 全民K歌 | `quanminkge` | ✅ | ❌ | ✅ | QuanMinKGe |
-| 20 | 🏠 六间房 | `sixroom` | ✅ | ❌ | ✅ | SixRoom |
-| 21 | 🎬 新片场 | `xinpianchang` | ✅ | ❌ | ✅ | XinPianChang |
-| 22 | 👀 好看视频 | `haokan` | ✅ | ❌ | ✅ | Haokan Video |
+```mermaid
+flowchart TB
+    A["代理目标 URL"] --> B{"协议为<br/>http/https?"}
+    B -->|否| X["拒绝 403"]
+    B -->|是| C{"主机为<br/>localhost?"}
+    C -->|是| X
+    C -->|否| D["DNS 解析全部 IP"]
+    D --> E{"存在<br/>环回/私有/链路本地<br/>/保留/组播 地址?"}
+    E -->|是| X
+    E -->|否| F{"解析到<br/>任一有效 IP?"}
+    F -->|否| X
+    F -->|是| G["放行, 发起上游请求"]
 
-**图例说明：**
-- ✅ 支持
-- ❌ 不支持
-- 视频：支持无水印视频下载
-- 图集：支持多图下载
-- 封面：支持封面图片下载
-
-</div>
+    classDef deny fill:#da363322,stroke:#da3633,stroke-width:1px;
+    classDef allow fill:#2ea04322,stroke:#2ea043,stroke-width:1px;
+    class X deny;
+    class G allow;
+```
 
 ---
 
-## 🛠️ 开发指南
+## 可观测性与日志
 
-### 项目结构
+服务采用 `tracing` 结构化日志，输出包含本地时区时间戳、日志级别、模块路径与键值字段，便于采集与检索：
 
 ```
-rust_vedio/
-├── frontend/                    # 前端项目
-│   ├── src/
-│   │   ├── components/         # Vue组件
-│   │   │   ├── Logo/          # Logo组件
-│   │   │   ├── Parser/        # 解析器组件
-│   │   │   ├── ThemeSwitcher.vue
-│   │   │   └── Toast/         # 通知组件
-│   │   ├── stores/            # Pinia状态管理
-│   │   ├── plugins/           # Vuetify配置
-│   │   ├── utils/             # 工具函数
-│   │   └── views/             # 页面视图
-│   ├── package.json
-│   └── vite.config.ts
-├── src/                         # 后端项目
-│   ├── main.rs                 # 程序入口
-│   ├── models.rs               # 数据模型
-│   ├── server.rs               # HTTP服务器
-│   ├── utils.rs                # 工具函数
-│   └── parser/                 # 解析器模块
-│       ├── mod.rs
-│       ├── douyin.rs          # 抖音解析器
-│       ├── kuaishou.rs        # 快手解析器
-│       ├── bilibili.rs        # B站解析器
-│       └── ...                # 其他平台
-├── Dockerfile                   # Docker配置
-├── docker-compose.yml
-├── Cargo.toml
-└── README.md
+2026-06-15T23:38:34.115+08:00  INFO rust_video_parser::server: HTTP 服务已就绪, 开始监听 addr=0.0.0.0:8080
+2026-06-15T23:38:36.702+08:00  INFO rust_video_parser::server: 请求处理完成 client_ip=127.0.0.1 method=GET path=/api/health status=200 latency_ms="0.23"
 ```
 
-### 技术栈
-
-**后端技术**
-
-| 组件 | 版本 | 说明 |
-|------|------|------|
-| Rust | 1.75+ | 系统编程语言 |
-| Axum | 0.7 | 异步Web框架 |
-| Tokio | 1.x | 异步运行时 |
-| Reqwest | 0.11 | HTTP客户端 |
-| Serde | 1.0 | 序列化/反序列化 |
-| Scraper | 0.18 | HTML解析 |
-
-**前端技术**
-
-| 组件 | 版本 | 说明 |
-|------|------|------|
-| Vue | 3.4+ | 渐进式框架 |
-| Vuetify | 3.5 | Material Design组件库 |
-| Vite | 5.0 | 构建工具 |
-| Pinia | 2.1 | 状态管理 |
-| TypeScript | 5.3 | 类型系统 |
-| GSAP | 3.12 | 动画引擎 |
-
-### 添加新平台
-
-1. **创建解析器**
-
-```rust
-// src/parser/newplatform.rs
-use crate::models::VideoParseInfo;
-use anyhow::Result;
-
-pub async fn parse_share_url(share_url: &str) -> Result<VideoParseInfo> {
-    // 实现解析逻辑
-    Ok(VideoParseInfo::default())
-}
-```
-
-2. **注册平台**
-
-```rust
-// src/parser/mod.rs
-pub mod newplatform;
-
-// src/models.rs
-pub enum VideoSource {
-    // ...
-    NewPlatform,
-}
-```
-
-3. **添加路由处理**
-
-### 代码规范
+日志级别通过 `RUST_LOG` 控制，遵循 `tracing` EnvFilter 语法：
 
 ```bash
-# Rust代码格式化
-cargo fmt
+RUST_LOG=info                                   # 默认级别
+RUST_LOG=rust_video_parser=debug                # 开启解析器调试日志
+RUST_LOG=warn,rust_video_parser::server=info    # 仅服务模块 info，其余 warn
+```
 
-# Rust代码检查
-cargo clippy
+健康检查端点 `GET /api/health` 可用于容器编排的存活/就绪探针。
 
-# Rust测试
-cargo test
+---
 
-# 前端代码检查
-cd frontend
-npm run lint
+## 平台支持矩阵
 
-# 前端构建
-npm run build
+| # | 平台 | 标识 | 视频 | 图集 | 封面 | 备注 |
+|:--:|------|------|:--:|:--:|:--:|------|
+| 1 | 抖音 | `douyin` | ✓ | ✓ | ✓ | Douyin |
+| 2 | 快手 | `kuaishou` | ✓ | ✓ | ✓ | Kuaishou |
+| 3 | 哔哩哔哩 | `bilibili` | ✓ | — | ✓ | Bilibili |
+| 4 | 小红书 | `redbook` | ✓ | ✓ | ✓ | XiaoHongShu |
+| 5 | 微博 | `weibo` | ✓ | ✓ | ✓ | Weibo |
+| 6 | 西瓜视频 | `xigua` | ✓ | — | ✓ | Xigua |
+| 7 | 皮皮虾 | `pipixia` | ✓ | — | ✓ | PiPiXia |
+| 8 | 微视 | `weishi` | ✓ | — | ✓ | Weishi |
+| 9 | 火山 | `huoshan` | ✓ | — | ✓ | Huoshan |
+| 10 | 最右 | `zuiyou` | ✓ | — | ✓ | ZuiYou |
+| 11 | 绿洲 | `lvzhou` | ✓ | — | ✓ | LvZhou |
+| 12 | 度小视 | `quanmin` | ✓ | — | ✓ | QuanMin |
+| 13 | 梨视频 | `lishipin` | ✓ | — | ✓ | LiShiPin |
+| 14 | 皮皮搞笑 | `pipigaoxiao` | ✓ | — | ✓ | PiPiGaoXiao |
+| 15 | 虎牙 | `huya` | ✓ | — | ✓ | Huya |
+| 16 | AcFun | `acfun` | ✓ | — | ✓ | AcFun |
+| 17 | 逗拍 | `doupai` | ✓ | — | ✓ | DouPai |
+| 18 | 美拍 | `meipai` | ✓ | — | ✓ | MeiPai |
+| 19 | 全民K歌 | `quanminkge` | ✓ | — | ✓ | QuanMinKGe |
+| 20 | 六间房 | `sixroom` | ✓ | — | ✓ | SixRoom |
+| 21 | 新片场 | `xinpianchang` | ✓ | — | ✓ | XinPianChang |
+| 22 | 好看视频 | `haokan` | ✓ | — | ✓ | Haokan |
+| 23 | 央视网 | `cctv` | ✓ | — | ✓ | CCTV |
+| 24 | 腾讯视频 | `qqvideo` | ✓ | — | ✓ | QQ Video |
+| 25 | 搜狐视频 | `sohu` | ✓ | — | ✓ | Sohu |
+| 26 | Twitter/X | `twitter` | ✓ | ✓ | ✓ | Twitter/X |
+
+> 图例：`✓` 支持，`—` 不适用。
+
+---
+
+## 项目结构
+
+```
+rust_video/
+├── src/
+│   ├── main.rs            # CLI 入口、日志初始化
+│   ├── server.rs          # HTTP 服务、中间件、代理、健康检查
+│   ├── models.rs          # 数据模型与平台枚举
+│   ├── download.rs        # 媒体下载（流式写入）
+│   ├── utils.rs           # HTTP 客户端、URL 提取、出站代理
+│   └── parser/            # 解析器层
+│       ├── mod.rs         # VideoParser trait、域名识别、工厂分发
+│       └── *.rs           # 26 个平台实现
+├── frontend/              # Vue 3 + Vuetify 3 前端工程
+├── templates/dist/        # 前端构建产物（服务运行时读取）
+├── Dockerfile             # 多阶段构建
+├── docker-compose.yml
+└── Cargo.toml
 ```
 
 ---
 
-## 📊 性能指标
+## 构建与测试
 
-| 指标 | 数值 | 说明 |
-|------|------|------|
-| **并发处理** | 2,500 req/s | wrk压测结果 |
-| **内存占用** | ~512 MB | 运行时内存 |
-| **启动时间** | ~5 秒 | Docker容器启动 |
-| **响应时间** | <100 ms | API平均响应 |
-| **镜像大小** | ~50 MB | Alpine Linux基础镜像 |
-| **构建时间** | 5-10 分钟 | 首次构建（含前端） |
-
----
-
-## 🤝 贡献指南
-
-欢迎贡献代码！请遵循以下步骤：
-
-### 贡献流程
-
-1. **Fork** 本项目
-2. 创建特性分支
-   ```bash
-   git checkout -b feature/AmazingFeature
-   ```
-3. 提交更改
-   ```bash
-   git commit -m 'Add some AmazingFeature'
-   ```
-4. 推送到分支
-   ```bash
-   git push origin feature/AmazingFeature
-   ```
-5. 提交 **Pull Request**
-
-### 开发规范
-
-- ✅ 遵循 Rust 代码规范（rustfmt）
-- ✅ 通过所有 Clippy 检查
-- ✅ 添加必要的注释和文档
-- ✅ 编写单元测试
-- ✅ 更新相关文档
-
-### 问题反馈
-
-- 🐛 [报告Bug](https://github.com/eginner01/rust_video_parser/issues/new?template=bug_report.md)
-- 💡 [功能建议](https://github.com/eginner01/rust_video_parser/issues/new?template=feature_request.md)
-- 💬 [讨论交流](https://github.com/eginner01/rust_video_parser/discussions)
-
----
-
-## 📝 更新日志
-
-### v2.1.1 (2024-11-08)
-
-**重要修复**
-- 🔧 修复 Docker 部署 API 路由 404 问题
-- 📦 添加 `/api` 路由前缀统一前后端
-- 🐳 优化 Docker Hub 镜像部署流程
-- 📝 完善 README 镜像部署文档
-
-### v2.1.0 (2024-11-08)
-
-**新增功能**
-- ✨ 全新 Vue 3 + Vuetify 3 前端界面
-- 🎨 6种精美主题风格
-- 📸 图片批量下载功能
-- 🖼️ 封面图片下载
-- ▶️ 视频在线播放器
-- 🎭 丰富的动画效果
-- 🐳 Docker Hub 镜像发布
-
-**优化改进**
-- ⚡ Docker镜像优化，体积减小50%
-- 🔧 改进错误处理机制
-- 📱 优化移动端适配
-- 🚀 提升API响应速度
-
-**Bug修复**
-- 🐛 修复部分平台解析失败
-- 🔒 修复跨域下载问题
-- 🎨 修复主题切换动画
-
-[查看完整更新日志](CHANGELOG.md)
-
----
-
-## ⚠️ 免责声明
-
-> **重要提示**
-
-- 本项目仅供**学习和研究**使用
-- 请勿用于**商业用途**和**非法用途**
-- 解析内容版权归**原作者所有**
-- 使用本工具产生的任何法律责任由**使用者自行承担**
-- 请**尊重原创**，合理使用
-
----
-
-## 📄 开源协议
-
-本项目采用 [MIT License](LICENSE) 开源协议。
-
+```bash
+cargo build --release      # 发布构建（LTO + strip）
+cargo test                 # 单元测试
+cargo fmt                  # 代码格式化
+cargo clippy               # 静态检查
 ```
-MIT License
 
-Copyright (c) 2024 Rust Video Parser
+测试覆盖解析器关键纯逻辑（ID 提取、令牌算法、混淆还原）、SSRF 地址判定与下载工具函数。
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files...
+### 镜像多阶段构建流程
+
+`Dockerfile` 采用三阶段构建：前端与后端分别在专用工具链镜像中编译，最终仅将二进制与静态产物拷入精简运行时，发布镜像不含任何构建工具链。
+
+```mermaid
+flowchart LR
+    subgraph S1["阶段一 frontend-builder<br/>(node:18-alpine)"]
+        direction TB
+        A1["npm ci 安装依赖"] --> A2["vite build"] --> A3["/frontend/dist"]
+    end
+
+    subgraph S2["阶段二 backend-builder<br/>(rust:alpine)"]
+        direction TB
+        B1["拷贝 Cargo.toml / src"] --> B2["拷入前端 dist<br/>→ templates/dist"]
+        B2 --> B3["cargo build --release<br/>(LTO + strip)"]
+        B3 --> B4["/app/target/release<br/>rust_video_parser"]
+    end
+
+    subgraph S3["阶段三 运行时<br/>(alpine:latest)"]
+        direction TB
+        C1["ca-certificates + 非 root 用户"]
+        C2["拷入二进制 + templates/dist"]
+        C3["EXPOSE 8080 / HEALTHCHECK"]
+        C1 --> C2 --> C3
+    end
+
+    A3 -->|"COPY --from"| B2
+    B4 -->|"COPY --from"| C2
+    S3 --> OUT["发布镜像 ~50MB"]
+
+    classDef build fill:#1f6feb22,stroke:#1f6feb,stroke-width:1px;
+    classDef out fill:#2ea04322,stroke:#2ea043,stroke-width:1px;
+    class S1,S2 build;
+    class S3,OUT out;
 ```
 
 ---
 
-## 🙏 致谢
+## 性能参考
 
-### 开源项目
+| 指标 | 量级 | 说明 |
+| --- | --- | --- |
+| 解析响应 | < 100 ms | 不含上游平台网络耗时 |
+| 内存占用 | 约 50–512 MB | 取决于并发与视频代理流量 |
+| 冷启动 | 约 5 s | 容器启动至就绪 |
+| 镜像体积 | 约 50 MB | Alpine + 静态链接 |
 
-- 感谢 [parse-video](https://github.com/wujunwei928/parse-video) 提供的Go版本参考
-- 感谢 Rust 社区提供的优秀生态系统
-- 感谢 Vue.js 和 Vuetify 团队
-
-### 贡献者
-
-感谢所有为本项目做出贡献的开发者！
-
-<!-- ALL-CONTRIBUTORS-LIST:START -->
-<!-- 贡献者列表 -->
-<!-- ALL-CONTRIBUTORS-LIST:END -->
+> 实际数值受上游平台、网络环境与硬件配置影响，以上为参考量级。
 
 ---
 
-## 🌟 Star History
+## 免责声明
 
-如果这个项目对你有帮助，请给个 **Star** ⭐
-
-[![Star History Chart](https://api.star-history.com/svg?repos=eginner01/rust_video_parser&type=Date)](https://star-history.com/#eginner01/rust_video_parser&Date)
+本项目仅供学习与技术研究使用。请勿用于商业或非法用途；解析所得内容版权归原作者所有；使用本工具产生的任何后果由使用者自行承担，请遵守相关平台服务条款与法律法规。
 
 ---
 
-## 📞 联系方式
+## 许可证
 
-- 💬 Issues: [GitHub Issues](https://github.com/eginner01/rust_video_parser/issues)
+本项目基于 [MIT License](LICENSE) 开源。
 
----
+## 致谢
 
-<div align="center">
-
-### 🎉 感谢使用 Rust Video Parser！
-
-**Made with ❤️ and 🦀 Rust**
-
-如果觉得项目不错，请分享给更多人！
-
-[![GitHub stars](https://img.shields.io/github/stars/eginner01/rust_video_parser?style=social)](https://github.com/eginner01/rust_video_parser/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/eginner01/rust_video_parser?style=social)](https://github.com/eginner01/rust_video_parser/network/members)
-[![GitHub watchers](https://img.shields.io/github/watchers/eginner01/rust_video_parser?style=social)](https://github.com/eginner01/rust_video_parser/watchers)
-
-[⬆ 返回顶部](#-rust-video-parser)
-
-</div>
+- [parse-video](https://github.com/wujunwei928/parse-video) —— Go 版参考实现
+- Rust、Tokio、Axum 及 Vue 生态社区
