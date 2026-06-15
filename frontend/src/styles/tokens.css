@@ -1,0 +1,94 @@
+/* ============================================================
+   设计令牌 (Design Tokens)
+   单一中性灰阶 + 单一去饱和蓝色强调；亮色优先，暗色经 [data-theme="dark"] 覆盖。
+   描边与间距构建层次，避免大阴影/渐变/玻璃态。
+   ============================================================ */
+
+:root {
+  /* 中性面板与文本 */
+  --bg: #fcfcfd;
+  --bg-subtle: #f4f5f7;
+  --surface: #ffffff;
+  --surface-hover: #f7f8fa;
+  --border: #e3e5e9;
+  --border-strong: #cfd2d8;
+  --text: #1b1e23;
+  --text-muted: #5a616b;
+  --text-subtle: #8b919b;
+
+  /* 单一强调色（去饱和蓝） */
+  --accent: #2c62c4;
+  --accent-hover: #214e9f;
+  --accent-contrast: #ffffff;
+  --accent-soft: #eaf0fb;
+  --accent-border: #c5d6f3;
+
+  /* 语义色 */
+  --danger: #c4413a;
+  --danger-soft: #fbecea;
+  --success: #2f8a4e;
+
+  /* 圆角：统一软角体系（输入/按钮/卡片同一刻度族） */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  /* 间距刻度 (4px 基) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* 字阶（工具型 UI，基准 14px） */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+
+  /* 字体：系统字体栈（含中文），不引入 web 字体 */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Menlo",
+    Consolas, "Liberation Mono", monospace;
+
+  /* 极克制的阴影（仅浮层用） */
+  --shadow-overlay: 0 8px 28px rgba(20, 23, 28, 0.16);
+
+  /* 过渡：单一短时长 */
+  --t: 140ms ease;
+
+  /* 层级 */
+  --z-toast: 60;
+  --z-modal: 50;
+  --z-bar: 40;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1216;
+  --bg-subtle: #15191f;
+  --surface: #161a20;
+  --surface-hover: #1b2027;
+  --border: #272d35;
+  --border-strong: #3a414b;
+  --text: #e6e8ec;
+  --text-muted: #9aa1ab;
+  --text-subtle: #6b727c;
+
+  --accent: #5c8def;
+  --accent-hover: #76a1f4;
+  --accent-contrast: #0f1216;
+  --accent-soft: #18233a;
+  --accent-border: #2c3c5e;
+
+  --danger: #e0796f;
+  --danger-soft: #2a1b1a;
+  --success: #5cbd78;
+
+  --shadow-overlay: 0 8px 28px rgba(0, 0, 0, 0.5);
+}

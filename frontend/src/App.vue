@@ -1,120 +1,257 @@
-<template>
-  <v-app>
-    <!-- 主题背景效果 -->
-    <div class="theme-background">
-      <div class="animated-background"></div>
-    </div>
+<script setup>
+import { ref, onMounted, computed } from 'vue'
+import AppTopBar from './components/AppTopBar.vue'
+import ParsePanel from './components/ParsePanel.vue'
+import ResultView from './components/ResultView.vue'
+import PlatformMarquee from './components/PlatformMarquee.vue'
+import AppFooter from './components/AppFooter.vue'
+import PlatformsDialog from './components/PlatformsDialog.vue'
+import ToastHost from './components/ToastHost.vue'
+import Icon from './components/Icon.vue'
+import { getPlatforms, parseShareUrl, parseById } from './api'
+import { toast } from './lib/toast'
 
-    <!-- 主内容 -->
-    <v-main>
-      <transition name="page" mode="out-in">
-        <router-view />
-      </transition>
-    </v-main>
+const platforms = ref([])
+const result = ref(null)
+const loading = ref(false)
+const error = ref('')
+const showPlatforms = ref(false)
 
-    <!-- Toast通知 -->
-    <ToastContainer />
-  </v-app>
-</template>
+const hasOutcome = computed(() => loading.value || !!error.value || !!result.value)
 
-<script setup lang="ts">
-import { watch } from 'vue'
-import { useTheme } from 'vuetify'
-import { useThemeStore } from './stores/theme'
-import ToastContainer from './components/Toast/ToastContainer.vue'
+onMounted(async () => {
+  try {
+    platforms.value = await getPlatforms()
+  } catch {
+    // 平台列表加载失败不阻塞解析
+  }
+})
 
-const vuetifyTheme = useTheme()
-const themeStore = useThemeStore()
-
-// 监听主题变化并应用到 Vuetify
-watch(() => themeStore.currentTheme, (newTheme) => {
-  vuetifyTheme.global.name.value = newTheme
-}, { immediate: true })
+async function run(promise) {
+  loading.value = true
+  error.value = ''
+  try {
+    result.value = await promise
+  } catch (e) {
+    result.value = null
+    error.value = e.message || '解析失败'
+    toast(error.value, 'error')
+  } finally {
+    loading.value = false
+  }
+}
+const onParseShare = (text) => run(parseShareUrl(text))
+const onParseId = (source, videoId) => run(parseById(source, videoId))
 </script>
 
-<style lang="scss">
-* {
-  margin: 0;
+<template>
+  <AppTopBar @open-platforms="showPlatforms = true" />
+
+  <main>
+    <!-- Hero：工具即主角，可直接操作 -->
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <h1 class="hero-title">全平台短视频，去水印解析</h1>
+          <div class="usage">
+            <span class="u-step"><span class="u-n">1</span>粘贴链接</span>
+            <Icon name="arrow" :size="15" class="u-arrow" />
+            <span class="u-step"><span class="u-n">2</span>一键解析</span>
+            <Icon name="arrow" :size="15" class="u-arrow" />
+            <span class="u-step"><span class="u-n">3</span>预览 / 下载</span>
+          </div>
+        </div>
+
+        <ParsePanel
+          :platforms="platforms"
+          :loading="loading"
+          @parse-share="onParseShare"
+          @parse-id="onParseId"
+        />
+
+        <ul class="stats">
+          <li><strong>26</strong> 个平台</li>
+          <li><strong>视频 · 图集 · 音乐</strong></li>
+          <li><strong>无水印 · 免登录</strong></li>
+        </ul>
+
+        <div v-if="hasOutcome" class="outcome">
+          <div v-if="loading" class="card skeleton" aria-busy="true">
+            <div class="sk-line w60"></div>
+            <div class="sk-line w30"></div>
+            <div class="sk-block"></div>
+          </div>
+
+          <div v-else-if="error" class="card state error-state">
+            <Icon name="alert" :size="18" />
+            <div>
+              <p class="state-title">解析失败</p>
+              <p class="muted state-msg">{{ error }}</p>
+            </div>
+          </div>
+
+          <ResultView v-else-if="result" :result="result" />
+        </div>
+      </div>
+    </section>
+
+    <PlatformMarquee :platforms="platforms" />
+  </main>
+
+  <AppFooter />
+
+  <PlatformsDialog :platforms="platforms" :open="showPlatforms" @close="showPlatforms = false" />
+  <ToastHost />
+</template>
+
+<style scoped>
+.hero {
+  padding-top: var(--sp-6);
+  padding-bottom: var(--sp-5);
+}
+.hero-inner {
+  display: flex;
+  flex-direction: column;
+}
+.hero-copy {
+  max-width: 56ch;
+  margin: 0 auto var(--sp-5);
+  text-align: center;
+}
+.hero-title {
+  font-size: clamp(26px, 4.4vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+.usage {
+  margin-top: var(--sp-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+}
+.u-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.u-n {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+.u-arrow {
+  color: var(--text-subtle);
+}
+
+.stats {
+  list-style: none;
+  margin: var(--sp-4) 0 0;
   padding: 0;
-  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-2) var(--sp-5);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+.stats li {
+  position: relative;
+}
+.stats li + li::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--sp-5) / -2 - 1px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 12px;
+  background: var(--border-strong);
+}
+.stats strong {
+  color: var(--text);
+  font-weight: 600;
 }
 
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow-x: hidden;
+.outcome {
+  margin-top: var(--sp-6);
+}
+.state {
+  padding: var(--sp-5);
+}
+.state-title {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.state-msg {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+.error-state {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+.error-state :deep(svg) {
+  color: var(--danger);
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
-.v-application {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* 骨架屏 */
+.skeleton {
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
 }
-
-.theme-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-
-  .animated-background {
-    position: absolute;
-    width: 200%;
-    height: 200%;
-    top: -50%;
-    left: -50%;
-    background: radial-gradient(circle at 20% 50%, rgba(var(--v-theme-primary), 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(var(--v-theme-secondary), 0.1) 0%, transparent 50%);
-    animation: backgroundMove 20s ease-in-out infinite;
+.sk-line,
+.sk-block {
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.sk-line {
+  height: 14px;
+}
+.sk-line.w60 {
+  width: 60%;
+}
+.sk-line.w30 {
+  width: 30%;
+}
+.sk-block {
+  height: 220px;
+  border-radius: var(--radius);
+  margin-top: var(--sp-2);
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
   }
 }
-
-@keyframes backgroundMove {
-  0%, 100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  33% {
-    transform: translate(-5%, -5%) rotate(5deg);
-  }
-  66% {
-    transform: translate(5%, 5%) rotate(-5deg);
-  }
-}
-
-// 页面过渡动画
-.page-enter-active,
-.page-leave-active {
-  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-
-.page-enter-from {
-  opacity: 0;
-  transform: translateY(30px) scale(0.95);
-}
-
-.page-leave-to {
-  opacity: 0;
-  transform: translateY(-30px) scale(0.95);
-}
-
-// 滚动条样式
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(var(--v-theme-primary), 0.5);
-  border-radius: 5px;
-  
-  &:hover {
-    background: rgba(var(--v-theme-primary), 0.7);
+@media (prefers-reduced-motion: reduce) {
+  .sk-line,
+  .sk-block {
+    animation: none;
   }
 }
 </style>

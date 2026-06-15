@@ -68,9 +68,12 @@ async fn security_middleware(
 ) -> Response {
     let path = req.uri().path().to_string();
 
-    // 限流豁免：健康检查与静态资源
+    // 限流豁免：健康检查、静态资源与媒体代理。
+    // 代理接口服务图集/视频在线预览，单次展示可能触发数十张图片请求；
+    // 限流仅用于保护解析接口（且代理已有 SSRF 防护），故此处豁免。
     let rate_exempt = path == "/api/health"
         || path.starts_with("/assets")
+        || path.starts_with("/api/proxy")
         || path == "/title.jpg";
     if !rate_exempt && !state.rate_limiter.check(addr.ip()) {
         return (
