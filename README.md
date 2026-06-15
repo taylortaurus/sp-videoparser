@@ -2,7 +2,7 @@
 
 # Rust Video Parser
 
-**企业级全平台短视频解析服务 —— 高性能 · 安全可控 · 生产就绪**
+**全平台短视频解析服务 —— 高性能 · 安全可控 · 生产就绪**
 
 [![Rust](https://img.shields.io/badge/Rust-1.75%2B-000000?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![Axum](https://img.shields.io/badge/Axum-0.7-1f6feb?style=flat-square)](https://github.com/tokio-rs/axum)

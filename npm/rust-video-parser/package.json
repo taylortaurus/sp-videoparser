@@ -1,7 +1,7 @@
 {
   "name": "rust-video-parser",
   "version": "2.1.0",
-  "description": "企业级全平台短视频解析 CLI —— 26 个平台无水印解析，Rust 实现，预编译多平台二进制",
+  "description": "全平台短视频解析 CLI —— 26 个平台无水印解析，Rust 实现，预编译多平台二进制",
   "keywords": [
     "video",
     "parser",
