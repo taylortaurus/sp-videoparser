@@ -1,37 +1,46 @@
 /* ============================================================
-   设计令牌 (Design Tokens)
-   单一中性灰阶 + 单一去饱和蓝色强调；亮色优先，暗色经 [data-theme="dark"] 覆盖。
-   描边与间距构建层次，避免大阴影/渐变/玻璃态。
+   设计令牌 (Design Tokens) · 高级亮色产品方向
+   钢青蓝为唯一动作/状态强调色；亮色优先，暗色经 [data-theme="dark"] 覆盖。
+   层次 = 描边 + 色阶 + 柔和阴影（仅焦点面）；顶部以低饱和极光色场营造高级感。
    ============================================================ */
 
 :root {
   /* 中性面板与文本 */
-  --bg: #fcfcfd;
-  --bg-subtle: #f4f5f7;
+  --bg: #fbfcfe;
+  --bg-subtle: #f1f4f9;
   --surface: #ffffff;
-  --surface-hover: #f7f8fa;
-  --border: #e3e5e9;
-  --border-strong: #cfd2d8;
-  --text: #1b1e23;
-  --text-muted: #5a616b;
-  --text-subtle: #8b919b;
+  --surface-hover: #f5f7fb;
+  --surface-2: #f7f9fc; /* 第二表面层：信息条 / 内嵌瓦片 */
+  --border: #e5e8ef;
+  --border-strong: #ccd2de;
+  --text: #161a20;
+  --text-muted: #565d6b;
+  --text-subtle: #6c7382; /* AA: ≥4.5:1，可安全用于占位符/提示等文本 */
 
-  /* 单一强调色（去饱和蓝） */
+  /* 单一强调色（钢青蓝） */
   --accent: #2c62c4;
-  --accent-hover: #214e9f;
+  --accent-hover: #224ea0;
   --accent-contrast: #ffffff;
   --accent-soft: #eaf0fb;
   --accent-border: #c5d6f3;
+
+  /* 极光色场 hue（RGB 三元组，配 rgb(var() / alpha) 使用，仅装饰） */
+  --glow-1: 44 98 196;   /* 钢青蓝 */
+  --glow-2: 32 178 214;  /* 青 */
+  --glow-3: 122 96 232;  /* 靛紫 */
+  --aurora-a: 0.16;      /* 极光整体强度（暗色更亮） */
 
   /* 语义色 */
   --danger: #c4413a;
   --danger-soft: #fbecea;
   --success: #2f8a4e;
+  --success-soft: #e7f4ec;
 
-  /* 圆角：统一软角体系（输入/按钮/卡片同一刻度族） */
+  /* 圆角：软角体系 */
   --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 12px;
+  --radius-xl: 18px; /* 控制台 / 焦点大面 */
 
   /* 间距刻度 (4px 基) */
   --sp-1: 4px;
@@ -41,8 +50,10 @@
   --sp-5: 24px;
   --sp-6: 32px;
   --sp-7: 48px;
+  --sp-8: 64px;
+  --sp-9: 96px;
 
-  /* 字阶（工具型 UI，基准 14px） */
+  /* 字阶（工具型 UI，基准 14px；Hero 为品牌印象，允许大号 clamp） */
   --fs-xs: 12px;
   --fs-sm: 13px;
   --fs-base: 14px;
@@ -50,6 +61,8 @@
   --fs-lg: 18px;
   --fs-xl: 22px;
   --fs-2xl: 28px;
+  --fs-3xl: 34px;
+  --fs-hero: clamp(28px, 4vw, 40px);
 
   /* 字体：系统字体栈（含中文），不引入 web 字体 */
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
@@ -57,11 +70,17 @@
   --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Menlo",
     Consolas, "Liberation Mono", monospace;
 
-  /* 极克制的阴影（仅浮层用） */
-  --shadow-overlay: 0 8px 28px rgba(20, 23, 28, 0.16);
+  /* 阴影分层（仅焦点面/浮层使用；次要表面保持纯平 + 描边） */
+  --shadow-sm: 0 1px 2px rgba(20, 23, 28, 0.06);
+  --shadow-md: 0 8px 24px -8px rgba(20, 23, 28, 0.14);
+  --shadow-lg: 0 24px 64px -20px rgba(23, 42, 92, 0.28);
+  --shadow-overlay: 0 12px 40px rgba(20, 23, 28, 0.18);
+  --ring-focus: 0 0 0 3px var(--accent-soft);
 
-  /* 过渡：单一短时长 */
+  /* 过渡与缓动 */
   --t: 140ms ease;
+  --t-med: 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* 层级 */
   --z-toast: 60;
@@ -70,25 +89,36 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #0f1216;
-  --bg-subtle: #15191f;
-  --surface: #161a20;
-  --surface-hover: #1b2027;
-  --border: #272d35;
-  --border-strong: #3a414b;
-  --text: #e6e8ec;
-  --text-muted: #9aa1ab;
-  --text-subtle: #6b727c;
+  --bg: #0c0f14;
+  --bg-subtle: #12161d;
+  --surface: #151a22;
+  --surface-hover: #1b212b;
+  --surface-2: #11151c;
+  --border: #252c37;
+  --border-strong: #3a414d;
+  --text: #e8eaef;
+  --text-muted: #a0a7b3;
+  --text-subtle: #828892; /* AA: ≥4.5:1，可安全用于占位符/提示等文本 */
 
   --accent: #5c8def;
-  --accent-hover: #76a1f4;
-  --accent-contrast: #0f1216;
-  --accent-soft: #18233a;
+  --accent-hover: #79a4f5;
+  --accent-contrast: #0b0e13;
+  --accent-soft: #182338;
   --accent-border: #2c3c5e;
+
+  --glow-1: 70 124 240;
+  --glow-2: 46 196 226;
+  --glow-3: 138 112 245;
+  --aurora-a: 0.30;
 
   --danger: #e0796f;
   --danger-soft: #2a1b1a;
   --success: #5cbd78;
+  --success-soft: #15241b;
 
-  --shadow-overlay: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 10px 30px -10px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 28px 70px -22px rgba(0, 0, 0, 0.7);
+  --shadow-overlay: 0 12px 40px rgba(0, 0, 0, 0.6);
+  --ring-focus: 0 0 0 3px var(--accent-soft);
 }

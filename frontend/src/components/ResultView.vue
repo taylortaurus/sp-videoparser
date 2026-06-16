@@ -46,7 +46,7 @@ function onLightboxDownload(i) {
 </script>
 
 <template>
-  <section class="result card">
+  <section class="result card card-elevated">
     <header class="r-head">
       <h2 class="r-title">{{ title }}</h2>
       <div class="r-author">
@@ -106,7 +106,7 @@ function onLightboxDownload(i) {
 
 <style scoped>
 .result {
-  padding: var(--sp-5);
+  padding: var(--sp-6);
   display: flex;
   flex-direction: column;
   gap: var(--sp-5);

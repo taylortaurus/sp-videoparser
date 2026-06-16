@@ -1,4 +1,4 @@
-/* 基础重置与全局元素样式 */
+/* 基础重置与全局元素样式 + 共享原子（高级亮色产品） */
 
 *,
 *::before,
@@ -17,6 +17,7 @@ html {
 }
 
 body {
+  position: relative;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
@@ -27,6 +28,8 @@ body {
 }
 
 #app {
+  position: relative;
+  z-index: 1;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -100,31 +103,111 @@ img {
   }
 }
 
-/* ---- 共享原子：容器 / 按钮 / 输入 / 卡片 / 徽标 ---- */
-
-.container {
-  width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 var(--sp-4);
+/* ---- 极光色场：顶部低饱和光晕，营造高级感（纯装饰，不影响文本对比） ---- */
+.aurora {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 78vh;
+  min-height: 520px;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.aurora::before,
+.aurora::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+}
+.aurora::before {
+  width: 70vw;
+  height: 60vh;
+  top: -14vh;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+      closest-side,
+      rgb(var(--glow-1) / var(--aurora-a)),
+      transparent
+    ),
+    radial-gradient(
+      closest-side,
+      rgb(var(--glow-2) / calc(var(--aurora-a) * 0.7)),
+      transparent
+    );
+  background-position: 40% 30%, 70% 60%;
+  background-repeat: no-repeat;
+  background-size: 70% 100%, 55% 80%;
+}
+.aurora::after {
+  width: 42vw;
+  height: 42vh;
+  top: 4vh;
+  left: 18%;
+  background: radial-gradient(
+    closest-side,
+    rgb(var(--glow-3) / calc(var(--aurora-a) * 0.66)),
+    transparent
+  );
+}
+/* 极光底部柔和过渡到页面底色 */
+.aurora-fade {
+  position: fixed;
+  inset: auto 0 auto 0;
+  top: calc(78vh - 180px);
+  height: 220px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--bg));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .aurora::before {
+    animation: aurora-drift 26s var(--ease-out) infinite alternate;
+  }
+  .aurora::after {
+    animation: aurora-drift2 32s var(--ease-out) infinite alternate;
+  }
+}
+@keyframes aurora-drift {
+  to {
+    transform: translateX(-50%) translateY(22px) scale(1.08);
+  }
+}
+@keyframes aurora-drift2 {
+  to {
+    transform: translate(40px, -16px) scale(1.12);
+  }
 }
 
+/* ---- 容器 ---- */
+.container {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 var(--sp-5);
+}
+.container-narrow {
+  max-width: 720px;
+}
+
+/* ---- 按钮 ---- */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--sp-2);
-  height: 36px;
+  height: 38px;
   padding: 0 var(--sp-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
   font-size: var(--fs-sm);
-  font-weight: 500;
+  font-weight: 550;
   white-space: nowrap;
   transition: background var(--t), border-color var(--t), transform var(--t),
-    color var(--t);
+    box-shadow var(--t), color var(--t);
 }
 .btn:hover {
   background: var(--surface-hover);
@@ -142,14 +225,28 @@ img {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-contrast);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 6px 18px -6px rgb(var(--glow-1) / 0.55);
 }
 .btn-primary:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset,
+    0 10px 24px -6px rgb(var(--glow-1) / 0.7);
+}
+.btn-primary:disabled {
+  box-shadow: none;
+}
+
+.btn-lg {
+  height: 48px;
+  padding: 0 var(--sp-5);
+  font-size: var(--fs-md);
+  border-radius: var(--radius-lg);
 }
 
 .btn-sm {
-  height: 30px;
+  height: 32px;
   padding: 0 var(--sp-3);
   font-size: var(--fs-xs);
 }
@@ -164,11 +261,26 @@ img {
 }
 
 .btn-icon {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   padding: 0;
 }
 
+/* 触摸设备：交互目标放大到 ≥44px，便于拇指点击（不影响鼠标精度） */
+@media (pointer: coarse) {
+  .btn {
+    height: 44px;
+  }
+  .btn-sm {
+    height: 44px;
+  }
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* ---- 输入 ---- */
 .input,
 .textarea,
 .select {
@@ -189,7 +301,7 @@ img {
 .select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: var(--ring-focus);
 }
 .textarea {
   resize: vertical;
@@ -197,12 +309,19 @@ img {
   line-height: 1.5;
 }
 
+/* ---- 卡片 / 面 ---- */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
+.card-elevated {
+  border-radius: var(--radius-xl);
+  border-color: var(--border);
+  box-shadow: var(--shadow-md);
+}
 
+/* ---- 标签 / 芯片 ---- */
 .tag {
   display: inline-flex;
   align-items: center;
@@ -214,7 +333,24 @@ img {
   border: 1px solid var(--accent-border);
   color: var(--accent);
   font-size: var(--fs-xs);
+  font-weight: 550;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 30px;
+  padding: 0 var(--sp-3);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
   font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.chip svg {
+  color: var(--accent);
 }
 
 .muted {
@@ -234,12 +370,11 @@ img {
   }
 }
 
-/* ---- 落地页：滚动渐显 ---- */
+/* ---- 滚动渐显（入场） ---- */
 .reveal {
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(18px);
+  transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out);
 }
 .reveal.in {
   opacity: 1;
@@ -253,23 +388,24 @@ img {
   }
 }
 
-/* ---- 区块与标题（落地页节奏） ---- */
+/* ---- 区块与标题节奏 ---- */
 .section {
-  padding: var(--sp-6) 0;
-  border-top: 1px solid var(--border);
+  position: relative;
+  padding: var(--sp-8) 0;
 }
-.section-alt {
-  background: var(--bg-subtle);
+.section-sm {
+  padding: var(--sp-7) 0;
 }
 .section-head {
   max-width: 60ch;
-  margin-bottom: var(--sp-5);
+  margin: 0 auto var(--sp-6);
+  text-align: center;
 }
 .section-title {
-  font-size: var(--fs-xl);
-  font-weight: 650;
+  font-size: var(--fs-2xl);
+  font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 .section-lead {
   margin-top: var(--sp-3);
@@ -277,12 +413,9 @@ img {
   font-size: var(--fs-md);
   line-height: 1.65;
 }
-.eyebrow {
-  display: inline-block;
-  margin-bottom: var(--sp-3);
-  color: var(--accent);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
+.divider {
+  height: 1px;
+  background: var(--border);
+  border: 0;
+  margin: 0;
 }
-

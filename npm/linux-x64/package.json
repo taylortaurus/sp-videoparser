@@ -1,6 +1,6 @@
 {
   "name": "@rust-video-parser/linux-x64",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "rust-video-parser 预编译二进制 (linux-x64)",
   "license": "MIT",
   "repository": {

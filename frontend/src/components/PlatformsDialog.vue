@@ -1,12 +1,12 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import Icon from './Icon.vue'
 
 const props = defineProps({
   platforms: { type: Array, default: () => [] },
   open: { type: Boolean, default: false },
 })
-defineEmits(['close'])
+const emit = defineEmits(['close'])
 
 const query = ref('')
 const filtered = computed(() => {
@@ -19,15 +19,60 @@ const filtered = computed(() => {
       (p.domains || []).some((d) => d.toLowerCase().includes(q))
   )
 })
+
+// 浮层无障碍：打开时聚焦搜索框，Esc 关闭，Tab 焦点陷阱，关闭后还焦到触发元素。
+const dialogEl = ref(null)
+const searchInput = ref(null)
+let lastFocused = null
+
+function onKeydown(e) {
+  if (!props.open) return
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    emit('close')
+    return
+  }
+  if (e.key !== 'Tab' || !dialogEl.value) return
+  const items = dialogEl.value.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  )
+  if (!items.length) return
+  const first = items[0]
+  const last = items[items.length - 1]
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault()
+    last.focus()
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault()
+    first.focus()
+  }
+}
+
+watch(
+  () => props.open,
+  (open) => {
+    if (open) {
+      lastFocused = document.activeElement
+      window.addEventListener('keydown', onKeydown)
+      nextTick(() => searchInput.value?.focus())
+    } else {
+      window.removeEventListener('keydown', onKeydown)
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
+      lastFocused = null
+    }
+  }
+)
+
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="open" class="modal" @click.self="$emit('close')">
-        <div class="dialog card">
+        <div class="dialog card" ref="dialogEl" role="dialog" aria-modal="true" aria-labelledby="platforms-title">
           <header class="d-head">
-            <h2 class="d-title">支持平台 <span class="muted">{{ platforms.length }}</span></h2>
+            <h2 id="platforms-title" class="d-title">支持平台 <span class="muted">{{ platforms.length }}</span></h2>
             <button class="btn btn-icon btn-sm btn-ghost" aria-label="关闭" @click="$emit('close')">
               <Icon name="x" :size="16" />
             </button>
@@ -35,7 +80,7 @@ const filtered = computed(() => {
 
           <div class="d-search">
             <Icon name="search" :size="15" />
-            <input v-model="query" class="input search-input" placeholder="搜索平台名或域名" spellcheck="false" />
+            <input ref="searchInput" v-model="query" class="input search-input" placeholder="搜索平台名或域名" spellcheck="false" />
           </div>
 
           <ul class="plist">

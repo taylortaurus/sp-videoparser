@@ -22,10 +22,9 @@ const doubled = computed(() =>
 <style scoped>
 .marquee {
   overflow: hidden;
-  border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  padding: var(--sp-3) 0;
+  background: var(--surface-2);
+  padding: var(--sp-2) 0;
   -webkit-mask-image: linear-gradient(
     90deg,
     transparent,
@@ -48,12 +47,13 @@ const doubled = computed(() =>
 .mq-item {
   display: inline-flex;
   align-items: center;
-  height: 30px;
-  padding: 0 var(--sp-3);
+  height: 24px;
+  padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--bg);
-  font-size: var(--fs-sm);
+  background: var(--surface);
+  font-size: var(--fs-xs);
+  font-weight: 500;
   color: var(--text-muted);
   white-space: nowrap;
 }

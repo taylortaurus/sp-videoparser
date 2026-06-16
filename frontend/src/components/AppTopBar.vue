@@ -4,7 +4,6 @@ import LogoMark from './LogoMark.vue'
 import { useTheme } from '@/lib/theme'
 import { LINKS } from '@/lib/links'
 
-defineEmits(['open-platforms'])
 const { theme, toggle } = useTheme()
 </script>
 
@@ -18,11 +17,6 @@ const { theme, toggle } = useTheme()
       </div>
 
       <div class="bar-actions">
-        <button class="btn btn-sm btn-ghost" @click="$emit('open-platforms')">
-          <Icon name="search" :size="15" />
-          <span class="label">支持平台</span>
-        </button>
-        <span class="bar-sep" aria-hidden="true"></span>
         <a class="btn btn-icon btn-ghost" :href="LINKS.github" target="_blank" rel="noopener" aria-label="GitHub 源码" title="GitHub 源码">
           <Icon name="github" :size="17" />
         </a>

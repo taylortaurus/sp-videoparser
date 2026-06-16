@@ -229,3 +229,10 @@ ENV/
 # macOS specific
 ._.DS_Store
 **/.DS_Store
+
+# ============================================
+# 设计文档（impeccable 本地参考，不纳入版本库）
+# ============================================
+/DESIGN.md
+/PRODUCT.md
+/.impeccable/
