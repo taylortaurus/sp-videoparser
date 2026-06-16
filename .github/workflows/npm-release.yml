@@ -161,3 +161,33 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
+
+  github-release:
+    name: GitHub Release（附带二进制）
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 下载全部二进制产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 整理发布资产（按平台命名）
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          cp artifacts/bin-win32-x64/rust_video_parser.exe release/rust_video_parser-windows-x64.exe
+          cp artifacts/bin-darwin-x64/rust_video_parser    release/rust_video_parser-macos-x64
+          cp artifacts/bin-darwin-arm64/rust_video_parser  release/rust_video_parser-macos-arm64
+          cp artifacts/bin-linux-x64/rust_video_parser     release/rust_video_parser-linux-x64
+          cp artifacts/bin-linux-arm64/rust_video_parser   release/rust_video_parser-linux-arm64
+
+      - name: 创建 / 更新 GitHub Release（附二进制）
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
