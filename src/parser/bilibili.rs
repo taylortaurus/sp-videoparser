@@ -137,10 +137,8 @@ impl BilibiliParser {
                 let path = parsed_url.path();
                 let parts: Vec<&str> = path.trim_matches('/').split('/').collect();
                 
-                if parts.len() >= 2 && parts[0] == "video" {
-                    if parts[1].starts_with("BV") {
-                        return Ok(parts[1].to_string());
-                    }
+                if parts.len() >= 2 && parts[0] == "video" && parts[1].starts_with("BV") {
+                    return Ok(parts[1].to_string());
                 }
             }
         }

@@ -49,6 +49,7 @@ impl Default for VideoParseInfo {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[allow(clippy::upper_case_acronyms)] // CCTV / QQVideo 为平台专有名词缩写，保留原样
 pub enum VideoSource {
     DouYin,
     KuaiShou,
