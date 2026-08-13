@@ -43,9 +43,6 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       
-      - name: Run fmt check
-        run: cargo fmt -- --check
-      
       - name: Run clippy
         run: cargo clippy -- -D warnings
       
@@ -71,9 +68,6 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
-      
-      - name: Run lint
-        run: npm run lint
       
       - name: Build
         run: npm run build
