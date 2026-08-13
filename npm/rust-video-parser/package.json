@@ -1,6 +1,6 @@
 {
   "name": "rust-video-parser",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "全平台短视频解析 CLI —— 26 个平台无水印解析，Rust 实现，预编译多平台二进制",
   "keywords": [
     "video",
@@ -12,13 +12,13 @@
     "cli",
     "rust"
   ],
-  "homepage": "https://github.com/eginner01/rust_video#readme",
+  "homepage": "https://github.com/eginner01/sp-videoparser#readme",
   "bugs": {
-    "url": "https://github.com/eginner01/rust_video/issues"
+    "url": "https://github.com/eginner01/sp-videoparser/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eginner01/rust_video.git"
+    "url": "git+https://github.com/eginner01/sp-videoparser.git"
   },
   "license": "MIT",
   "type": "commonjs",
@@ -32,10 +32,10 @@
     "node": ">=16"
   },
   "optionalDependencies": {
-    "@rust-video-parser/win32-x64": "2.3.0",
-    "@rust-video-parser/darwin-x64": "2.3.0",
-    "@rust-video-parser/darwin-arm64": "2.3.0",
-    "@rust-video-parser/linux-x64": "2.3.0",
-    "@rust-video-parser/linux-arm64": "2.3.0"
+    "@rust-video-parser/win32-x64": "2.3.1",
+    "@rust-video-parser/darwin-x64": "2.3.1",
+    "@rust-video-parser/darwin-arm64": "2.3.1",
+    "@rust-video-parser/linux-x64": "2.3.1",
+    "@rust-video-parser/linux-arm64": "2.3.1"
   }
 }
