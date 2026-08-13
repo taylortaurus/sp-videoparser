@@ -6,8 +6,12 @@ use crate::utils::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use regex::Regex;
+use reqwest::header::COOKIE;
 use scraper::{Html, Selector};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use tracing;
 
 pub struct DouyinParser;
@@ -75,12 +79,7 @@ impl DouyinParser {
                     url::form_urlencoded::byte_serialize(video_id.as_bytes()).collect::<String>()
                 );
                 let client = create_cookie_http_client()?;
-                let response = client
-                    .get(fallback_url)
-                    .header("User-Agent", crate::utils::DOUYIN_MOBILE_USER_AGENT)
-                    .send()
-                    .await?;
-                let html = response.text().await?;
+                let html = self.fetch_mobile_share_html(&client, &fallback_url).await?;
                 tracing::debug!(
                     html_len = html.len(),
                     has_aweme_id = html.contains("\"aweme_id\""),
@@ -99,6 +98,39 @@ impl DouyinParser {
                 Ok((data, false))
             }
         }
+    }
+
+    async fn fetch_mobile_share_html(
+        &self,
+        client: &reqwest::Client,
+        fallback_url: &str,
+    ) -> Result<String> {
+        let html = client
+            .get(fallback_url)
+            .header("User-Agent", crate::utils::DOUYIN_MOBILE_USER_AGENT)
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        if !html.contains("waf-jschallenge") && !html.contains("_wafchallengeid") {
+            return Ok(html);
+        }
+
+        let challenge_html = html.clone();
+        let cookie = tokio::task::spawn_blocking(move || solve_waf_challenge(&challenge_html))
+            .await
+            .map_err(|e| anyhow!("抖音 WAF 挑战计算任务失败: {}", e))??;
+
+        tracing::info!("检测到抖音 WAF 挑战，已完成工作量证明并重试");
+        Ok(client
+            .get(fallback_url)
+            .header("User-Agent", crate::utils::DOUYIN_MOBILE_USER_AGENT)
+            .header(COOKIE, cookie)
+            .send()
+            .await?
+            .text()
+            .await?)
     }
 
     async fn parse_app_share_url(&self, share_url: &str) -> Result<VideoParseInfo> {
@@ -354,9 +386,54 @@ impl DouyinParser {
     }
 }
 
+fn decode_base64_padded(value: &str) -> Result<Vec<u8>> {
+    let mut padded = value.to_string();
+    let padding = (4 - padded.len() % 4) % 4;
+    padded.extend(std::iter::repeat_n('=', padding));
+    STANDARD
+        .decode(padded)
+        .map_err(|e| anyhow!("抖音 WAF Base64 解码失败: {}", e))
+}
+
+fn solve_waf_challenge(html: &str) -> Result<String> {
+    let re = Regex::new(r#"cs="([^"]+)""#)?;
+    let encoded = re
+        .captures(html)
+        .and_then(|captures| captures.get(1))
+        .map(|value| value.as_str())
+        .ok_or_else(|| anyhow!("无法提取抖音 WAF 挑战数据"))?;
+
+    let challenge_json = decode_base64_padded(encoded)?;
+    let mut challenge: Value = serde_json::from_slice(&challenge_json)?;
+    let prefix = challenge
+        .pointer("/v/a")
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow!("抖音 WAF 挑战缺少前缀"))?;
+    let expected = challenge
+        .pointer("/v/c")
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow!("抖音 WAF 挑战缺少目标摘要"))?;
+    let prefix = decode_base64_padded(prefix)?;
+    let expected = decode_base64_padded(expected)?;
+
+    let nonce = (0_u32..=1_000_000)
+        .find(|nonce| {
+            let mut hasher = Sha256::new();
+            hasher.update(&prefix);
+            hasher.update(nonce.to_string().as_bytes());
+            hasher.finalize().as_slice() == expected.as_slice()
+        })
+        .ok_or_else(|| anyhow!("抖音 WAF 挑战计算失败"))?;
+
+    challenge["d"] = Value::String(STANDARD.encode(nonce.to_string()));
+    let cookie_value = STANDARD.encode(serde_json::to_vec(&challenge)?);
+    Ok(format!("_wafchallengeid={}", cookie_value))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn extracts_video_id_from_supported_urls() {
@@ -406,5 +483,30 @@ mod tests {
             .parse_video_data_from_html(html, "wanted")
             .unwrap();
         assert_eq!(item["aweme_id"], "wanted");
+    }
+
+    #[test]
+    fn solves_douyin_waf_challenge() {
+        let prefix = b"challenge-prefix";
+        let nonce = 42_u32;
+        let expected = Sha256::digest([prefix.as_slice(), nonce.to_string().as_bytes()].concat());
+        let challenge = json!({
+            "v": {
+                "a": STANDARD.encode(prefix),
+                "b": 1,
+                "c": STANDARD.encode(expected),
+            },
+            "s": "signature"
+        });
+        let encoded = STANDARD.encode(serde_json::to_vec(&challenge).unwrap());
+        let html = format!(r#"<script>var cs="{}";</script>"#, encoded);
+
+        let cookie = solve_waf_challenge(&html).unwrap();
+        let encoded_cookie = cookie.strip_prefix("_wafchallengeid=").unwrap();
+        let solved: Value =
+            serde_json::from_slice(&STANDARD.decode(encoded_cookie).unwrap()).unwrap();
+
+        assert_eq!(solved["d"], STANDARD.encode(nonce.to_string()));
+        assert_eq!(solved["v"], challenge["v"]);
     }
 }

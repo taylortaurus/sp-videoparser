@@ -1,6 +1,6 @@
 [package]
 name = "rust_video_parser"
-version = "2.3.1"
+version = "2.3.2"
 edition = "2021"
 authors = ["Rust Video Parser Team"]
 description = "A fast all-platform short-video parser with online preview and download, supporting 26 platforms"
@@ -45,6 +45,7 @@ rand = "0.8"
 chrono = "0.4"
 
 base64 = "0.22"
+sha2 = "0.10"
 
 rust-embed = "8"
 

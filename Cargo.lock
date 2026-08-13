@@ -1498,7 +1498,7 @@ dependencies = [
 
 [[package]]
 name = "rust_video_parser"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1515,6 +1515,7 @@ dependencies = [
  "scraper",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
  "tokio",
  "tower 0.4.13",

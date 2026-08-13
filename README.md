@@ -10,7 +10,7 @@
 [![Platforms](https://img.shields.io/badge/Platforms-26-2ea043?style=flat-square)](#平台支持矩阵)
 [![Docker](https://img.shields.io/badge/Docker-Ready-1f6feb?style=flat-square&logo=docker)](https://hub.docker.com/r/eginner01/rust_video_parser)
 [![License](https://img.shields.io/badge/License-MIT-6e7681?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.3.1-2ea043?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/Version-2.3.2-2ea043?style=flat-square)](#)
 
 [概述](#概述) · [架构](#技术架构) · [快速开始](#快速开始) · [配置](#配置参考) · [命令行](#命令行接口) · [HTTP API](#http-api-参考) · [安全](#安全特性) · [可观测性](#可观测性与日志)
 
