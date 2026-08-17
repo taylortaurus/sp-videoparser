@@ -23,6 +23,17 @@ const hasVideo = computed(() => !!props.result.video_url)
 const hasImages = computed(() => images.value.length > 0)
 
 const lightboxIndex = ref(null)
+const lightboxMode = ref('image')
+
+function openImage(i) {
+  lightboxMode.value = 'image'
+  lightboxIndex.value = i
+}
+
+function openLive(i) {
+  lightboxMode.value = 'live'
+  lightboxIndex.value = i
+}
 
 function dlVideo() {
   downloadResource('video', props.result.video_url, videoFilename(title.value))
@@ -41,6 +52,18 @@ function onLightboxDownload(i) {
   if (img) {
     downloadResource('image', img.url, `${title.value}_${String(i + 1).padStart(3, '0')}.jpg`)
     toast('开始下载图片', 'info')
+  }
+}
+
+function onLightboxLiveDownload(i) {
+  const img = images.value[i]
+  if (img?.live_photo_url) {
+    downloadResource(
+      'video',
+      img.live_photo_url,
+      `${title.value}_${String(i + 1).padStart(3, '0')}_live.mp4`
+    )
+    toast('开始下载实况视频', 'info')
   }
 }
 </script>
@@ -97,10 +120,21 @@ function onLightboxDownload(i) {
     </div>
 
     <div v-if="hasImages" class="r-block">
-      <ImageGallery :images="images" :title="title" @open="lightboxIndex = $event" />
+      <ImageGallery
+        :images="images"
+        :title="title"
+        @open="openImage"
+        @open-live="openLive"
+      />
     </div>
 
-    <Lightbox :images="images" v-model:index="lightboxIndex" @download="onLightboxDownload" />
+    <Lightbox
+      :images="images"
+      v-model:index="lightboxIndex"
+      v-model:mode="lightboxMode"
+      @download="onLightboxDownload"
+      @download-live="onLightboxLiveDownload"
+    />
   </section>
 </template>
 

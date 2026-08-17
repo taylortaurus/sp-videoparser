@@ -31,7 +31,7 @@ if (!SUPPORTED.has(key)) {
   fail(
     `暂不支持的平台: ${key}。\n` +
       `支持的平台: ${[...SUPPORTED].join(", ")}。\n` +
-      `可改用 Docker 镜像或源码构建: https://github.com/eginner01/rust_video`
+      `可改用 Docker 镜像或源码构建: https://github.com/eginner01/sp-videoparser`
   );
 }
 

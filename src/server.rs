@@ -451,7 +451,13 @@ async fn proxy_video_handler(
     };
 
     // 转发客户端的 Range 请求头，支持视频分段拖动播放
-    let mut req = client.get(&params.url);
+    let mut req = client
+        .get(&params.url)
+        // Douyin's signed video CDN rejects generic server-side fetches unless
+        // the request retains the browser page origin that issued the URL.
+        .header(reqwest::header::REFERER, "https://www.douyin.com/")
+        .header(reqwest::header::ORIGIN, "https://www.douyin.com")
+        .header(reqwest::header::ACCEPT, "*/*");
     if let Some(range) = headers.get(header::RANGE).and_then(|v| v.to_str().ok()) {
         req = req.header(reqwest::header::RANGE, range);
     }

@@ -1,6 +1,6 @@
 # rust-video-parser
 
-全平台短视频解析 CLI。基于 Rust 实现，26 个平台无水印解析，通过 npm 分发预编译多平台二进制。
+全平台短视频解析 CLI。基于 Rust 实现，26 个平台无水印解析，通过 npm 分发预编译多平台二进制。支持视频、图集、实况照片、封面和背景音乐解析与下载。
 
 ## 安装
 
@@ -37,7 +37,7 @@ rust-video serve --port 8080
 win32-x64、darwin-x64、darwin-arm64、linux-x64、linux-arm64。
 
 其它平台请使用 Docker 镜像或源码构建，详见
-[项目主页](https://github.com/eginner01/rust_video)。
+[项目主页](https://github.com/eginner01/sp-videoparser)。
 
 ## 许可证
 

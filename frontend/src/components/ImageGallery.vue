@@ -2,14 +2,14 @@
 import { ref, computed, watch } from 'vue'
 import Icon from './Icon.vue'
 import { proxyImage } from '@/api'
-import { downloadImagesZip, downloadImagesEach, downloadResource } from '@/lib/download'
+import { downloadImagesZip, downloadImagesEach } from '@/lib/download'
 import { toast } from '@/lib/toast'
 
 const props = defineProps({
   images: { type: Array, default: () => [] },
   title: { type: String, default: 'images' },
 })
-const emit = defineEmits(['open'])
+const emit = defineEmits(['open', 'open-live'])
 
 const picked = ref(props.images.map(() => false))
 watch(
@@ -61,10 +61,6 @@ async function onEach() {
   }
 }
 
-function downloadLive(img, i) {
-  downloadResource('video', img.live_photo_url, `${props.title}_${String(i + 1).padStart(3, '0')}_live.mp4`)
-  toast('开始下载 LivePhoto', 'info')
-}
 </script>
 
 <template>
@@ -103,10 +99,11 @@ function downloadLive(img, i) {
           v-if="img.live_photo_url"
           class="live"
           type="button"
-          title="下载 LivePhoto"
-          @click.stop="downloadLive(img, i)"
+          title="预览实况照片"
+          :aria-label="`预览第 ${i + 1} 张实况照片`"
+          @click.stop="emit('open-live', i)"
         >
-          <Icon name="play" :size="11" /> LIVE
+          <Icon name="play" :size="12" /> 预览实况
         </button>
       </figure>
     </div>
@@ -166,10 +163,6 @@ function downloadLive(img, i) {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform var(--t);
-}
-.thumb:hover img {
-  transform: scale(1.03);
 }
 .pick {
   position: absolute;
@@ -205,13 +198,35 @@ function downloadLive(img, i) {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 6px;
+  min-height: 26px;
+  padding: 3px 7px;
   border: 0;
   border-radius: 5px;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
+  transition: background var(--t);
+}
+.live:hover {
+  background: rgba(0, 0, 0, 0.78);
+}
+@media (max-width: 560px) {
+  .gallery-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .gallery-tools {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .gallery-tools .btn {
+    min-width: 0;
+    padding-inline: var(--sp-2);
+  }
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

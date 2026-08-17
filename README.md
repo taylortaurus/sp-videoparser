@@ -10,7 +10,7 @@
 [![Platforms](https://img.shields.io/badge/Platforms-26-2ea043?style=flat-square)](#平台支持矩阵)
 [![Docker](https://img.shields.io/badge/Docker-Ready-1f6feb?style=flat-square&logo=docker)](https://hub.docker.com/r/eginner01/rust_video_parser)
 [![License](https://img.shields.io/badge/License-MIT-6e7681?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.3.2-2ea043?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/Version-2.3.3-2ea043?style=flat-square)](#)
 
 [概述](#概述) · [架构](#技术架构) · [快速开始](#快速开始) · [配置](#配置参考) · [命令行](#命令行接口) · [HTTP API](#http-api-参考) · [安全](#安全特性) · [可观测性](#可观测性与日志)
 
@@ -26,7 +26,7 @@ Rust Video Parser 是一套面向生产环境的全平台短视频解析服务�
 
 | 维度 | 说明 |
 | --- | --- |
-| 解析能力 | 26 个平台无水印解析，支持视频 / 图集 / 封面 / 音乐 / 作者信息 |
+| 解析能力 | 26 个平台无水印解析，支持视频 / 图集 / 实况照片 / 封面 / 音乐 / 作者信息 |
 | 运行性能 | 基于 Tokio 异步运行时，单进程高并发，毫秒级解析响应 |
 | 资源占用 | 发布镜像约 50 MB（Alpine + 静态链接），秒级冷启动 |
 | 访问控制 | 可选 Basic 认证、按 IP 限流、CORS 策略 |
@@ -34,6 +34,30 @@ Rust Video Parser 是一套面向生产环境的全平台短视频解析服务�
 | 流式传输 | 视频代理支持 HTTP Range 透传与流式转发，避免大文件占用内存 |
 | 可观测性 | 结构化日志（本地时区时间戳 + 级别 + 模块 + 键值字段）、健康检查端点 |
 | 运维友好 | 环境变量集中配置、出站代理、优雅关闭、非 root 容器运行 |
+
+### 抖音实况照片
+
+`v2.3.3` 增加抖音实况照片完整解析和网页预览能力。解析结果会同时保留静态照片与对应的动态视频，并尽量返回作品封面和背景音乐：
+
+```json
+{
+  "music_url": "https://.../soundtrack",
+  "cover_url": "https://.../cover.jpeg",
+  "images": [
+    {
+      "url": "https://.../photo.jpeg",
+      "live_photo_url": "https://.../live-photo.mp4"
+    }
+  ]
+}
+```
+
+- 兼容抖音 Web 与 App 风格的多种图集字段结构。
+- 使用完整详情数据识别 `live_photo_type`、`clip_type` 和图片内的视频资源。
+- 严格区分图文背景音乐与实况视频，避免将音频误报为 `live_photo_url`。
+- 网页灯箱支持“照片 / 实况”切换、循环预览和分别下载。
+- 视频代理补齐抖音 CDN 来源请求头并支持 HTTP Range，可正常拖动播放。
+- 普通视频和普通图集继续使用原有 `video_url`、`images[].url` 返回结构。
 
 ---
 
@@ -222,6 +246,8 @@ docker run -d \
   --restart unless-stopped \
   eginner01/rust_video_parser:latest
 ```
+
+固定使用本版本可将镜像标签改为 `eginner01/rust_video_parser:2.3.3`。
 
 服务启动后访问 `http://localhost:8080`。
 
@@ -447,7 +473,7 @@ $ rust-video platforms
 
 ```console
 $ rust-video version
-rust_video_parser 2.1.0
+rust_video_parser 2.3.3
 ```
 
 ### 在容器中调用
@@ -475,7 +501,7 @@ GET /api/health
 ```
 
 ```json
-{ "status": "ok", "version": "2.1.0", "time": "2026-06-15T23:38:36+08:00" }
+{ "status": "ok", "version": "2.3.3", "time": "2026-08-17T12:50:00+08:00" }
 ```
 
 ### 解析分享链接
@@ -494,10 +520,17 @@ GET /api/video/share/url/parse?url=<分享链接或含链接的文本>
     "video_url": "https://...",
     "music_url": "https://...",
     "cover_url": "https://...",
-    "images": [ { "url": "https://...", "live_photo_url": "https://..." } ]
+    "images": [
+      {
+        "url": "https://.../photo.jpeg",
+        "live_photo_url": "https://.../live-photo.mp4"
+      }
+    ]
   }
 }
 ```
+
+`live_photo_url` 为可选字段，仅在上游数据明确提供实况视频时返回。普通图片仍只返回 `url`。
 
 ### 按平台与视频 ID 解析
 
@@ -771,6 +804,23 @@ flowchart TB
 ```
 
 发布流程：推送 `v*` 标签 → GitHub Actions 矩阵交叉编译 5 平台（Linux 走 `cargo-zigbuild` 静态 musl，TLS 用 rustls 免系统依赖）→ 注入各子包 → `npm publish`。相关产物位于仓库 `npm/` 目录，版本由 `npm/scripts/prepare.mjs` 统一同步。
+
+---
+
+## 版本更新
+
+### v2.3.3
+
+- 抖音解析器新增完整 Web 详情接口回退，恢复实况照片动态视频地址。
+- 图集解析兼容 `images`、`image_infos` 与 `image_post_info` 等结构。
+- 图文作品可返回静态图、实况视频、封面和背景音乐。
+- 新增实况照片网页预览、照片/实况切换及独立下载。
+- 修复抖音视频 CDN 代理 `403`，支持 `200/206` 流式播放。
+- 保持普通视频和普通图集的原有返回结构与下载流程。
+
+### v2.3.2
+
+- 增加抖音 WAF 工作量证明处理，提升 Debian 与 Docker 部署环境下的解析成功率。
 
 ---
 

@@ -1,6 +1,6 @@
 [package]
 name = "rust_video_parser"
-version = "2.3.2"
+version = "2.3.3"
 edition = "2021"
 authors = ["Rust Video Parser Team"]
 description = "A fast all-platform short-video parser with online preview and download, supporting 26 platforms"

@@ -8,7 +8,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use regex::Regex;
-use reqwest::header::COOKIE;
+use reqwest::header::{COOKIE, REFERER};
 use scraper::{Html, Selector};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -86,6 +86,23 @@ impl DouyinParser {
                     has_item_id = html.contains("\"itemId\""),
                     "收到抖音移动分享页"
                 );
+
+                match self
+                    .fetch_web_detail_data(&client, &fallback_url, video_id)
+                    .await
+                {
+                    Ok(data) => {
+                        let is_note = data
+                            .pointer("/images")
+                            .and_then(Value::as_array)
+                            .is_some_and(|images| !images.is_empty());
+                        return Ok((data, is_note));
+                    }
+                    Err(error) => {
+                        tracing::debug!(%error, "抖音 Web 详情接口不可用，降级解析分享页");
+                    }
+                }
+
                 let data =
                     self.parse_video_data_from_html(&html, video_id)
                         .map_err(|fallback_error| {
@@ -133,6 +150,31 @@ impl DouyinParser {
             .await?)
     }
 
+    async fn fetch_web_detail_data(
+        &self,
+        client: &reqwest::Client,
+        referer: &str,
+        video_id: &str,
+    ) -> Result<Value> {
+        let encoded_id =
+            url::form_urlencoded::byte_serialize(video_id.as_bytes()).collect::<String>();
+        let url = format!(
+            "https://www.douyin.com/aweme/v1/web/aweme/detail/?aweme_id={}&device_platform=webapp&aid=6383&channel=channel_pc_web",
+            encoded_id
+        );
+        let response = client
+            .get(url)
+            .header("User-Agent", crate::utils::DOUYIN_MOBILE_USER_AGENT)
+            .header(REFERER, referer)
+            .send()
+            .await?
+            .error_for_status()?;
+        let json: Value = response.json().await?;
+        json.get("aweme_detail")
+            .filter(|detail| detail.is_object())
+            .cloned()
+            .ok_or_else(|| anyhow!("抖音 Web 详情接口未返回作品数据"))
+    }
     async fn parse_app_share_url(&self, share_url: &str) -> Result<VideoParseInfo> {
         let client = create_no_redirect_client()?;
 
@@ -305,28 +347,18 @@ impl DouyinParser {
             .unwrap_or("")
             .to_string();
 
-        info.music_url = data
-            .pointer("/music/play_url/url_list/0")
-            .and_then(|v| v.as_str())
-            .map(str::to_string);
+        info.music_url = self.extract_music_url(data);
 
         // 提取封面
         info.cover_url = self.get_non_webp_url(data.pointer("/video/cover/url_list"));
 
-        // 提取图集
-        if let Some(images_array) = data.pointer("/images").and_then(|v| v.as_array()) {
-            for image in images_array {
-                if let Some(url_list) = image.pointer("/url_list") {
-                    if let Some(img_url) = self.get_non_webp_url(Some(url_list)) {
-                        info.images.push(ImgInfo {
-                            url: img_url,
-                            live_photo_url: image
-                                .pointer("/video/play_addr/url_list/0")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                        });
-                    }
-                }
+        // Extract image posts from all known web/App payload layouts.
+        for image in self.extract_image_items(data) {
+            if let Some(img_url) = self.extract_image_url(image) {
+                info.images.push(ImgInfo {
+                    url: img_url,
+                    live_photo_url: self.extract_live_photo_url(data, image),
+                });
             }
         }
 
@@ -349,6 +381,102 @@ impl DouyinParser {
         }
 
         Ok(info)
+    }
+
+    fn extract_music_url(&self, data: &Value) -> Option<String> {
+        first_url_at(
+            data,
+            &[
+                "/music/play_url/url_list/0",
+                "/music/play_url/uri",
+                "/music/play_url_uri",
+            ],
+        )
+        .or_else(|| {
+            // Image posts may expose the soundtrack as the top-level audio/mp4
+            // asset while omitting music.play_url from the web payload.
+            let music_duration = duration_at(data.pointer("/music/duration"));
+            let video_duration = duration_at(data.pointer("/video/duration")).unwrap_or(0.0);
+            if music_duration.is_some_and(|duration| duration > 0.0) && video_duration == 0.0 {
+                first_url_at(
+                    data,
+                    &["/video/play_addr/uri", "/video/play_addr/url_list/0"],
+                )
+            } else {
+                None
+            }
+        })
+    }
+
+    fn extract_image_items<'a>(&self, data: &'a Value) -> Vec<&'a Value> {
+        [
+            "/images",
+            "/image_infos",
+            "/image_post_info/images",
+            "/image_post_info/image_list",
+        ]
+        .iter()
+        .filter_map(|path| data.pointer(path).and_then(Value::as_array))
+        .flat_map(|images| images.iter())
+        .collect()
+    }
+
+    fn extract_image_url(&self, image: &Value) -> Option<String> {
+        let url_list = [
+            "/url_list",
+            "/display_image/url_list",
+            "/download_addr/url_list",
+            "/download_url/url_list",
+            "/download_url_list",
+        ]
+        .iter()
+        .find_map(|path| image.pointer(path));
+        self.get_non_webp_url(url_list)
+            .or_else(|| first_url_at(image, &["/url", "/uri"]))
+    }
+
+    fn extract_live_photo_url(&self, data: &Value, image: &Value) -> Option<String> {
+        let image_url = first_url_at(
+            image,
+            &[
+                "/video/play_addr/url_list/0",
+                "/video/play_addr/uri",
+                "/video/play_addr_h264/url_list/0",
+                "/video/download_addr/url_list/0",
+                "/live_photo/play_addr/url_list/0",
+                "/live_photo/play_addr/uri",
+                "/live_photo/url_list/0",
+                "/motion_photo/play_addr/url_list/0",
+                "/motion_photo/play_addr/uri",
+                "/dynamic_image/play_addr/url_list/0",
+            ],
+        );
+        if image_url.is_some() {
+            return image_url;
+        }
+
+        let marked_live = [
+            "/live_photo_type",
+            "/is_live_photo",
+            "/video/is_live_photo",
+            "/video/clip_type",
+        ]
+        .iter()
+        .any(|path| is_truthy_marker(data.pointer(path)) || is_truthy_marker(image.pointer(path)));
+
+        if marked_live {
+            return first_url_at(
+                data,
+                &[
+                    "/video/play_addr/url_list/0",
+                    "/video/play_addr/uri",
+                    "/video/play_addr_h264/url_list/0",
+                    "/video/download_addr/url_list/0",
+                ],
+            );
+        }
+
+        None
     }
 
     fn get_non_webp_url(&self, url_list: Option<&Value>) -> Option<String> {
@@ -386,6 +514,37 @@ impl DouyinParser {
     }
 }
 
+fn duration_at(value: Option<&Value>) -> Option<f64> {
+    let value = value?;
+    value
+        .as_f64()
+        .or_else(|| value.as_str().and_then(|duration| duration.parse().ok()))
+}
+
+fn is_truthy_marker(value: Option<&Value>) -> bool {
+    let Some(value) = value else {
+        return false;
+    };
+    value.as_bool().unwrap_or(false)
+        || value.as_i64().is_some_and(|marker| marker > 0)
+        || value
+            .as_str()
+            .is_some_and(|marker| matches!(marker, "1" | "true" | "live" | "live_photo"))
+}
+
+fn first_url_at(value: &Value, paths: &[&str]) -> Option<String> {
+    paths.iter().find_map(|path| {
+        let value = value.pointer(path)?;
+        if let Some(url) = value.as_str() {
+            return (!url.is_empty()).then(|| url.to_string());
+        }
+        value
+            .as_array()
+            .and_then(|items| items.iter().find_map(Value::as_str))
+            .filter(|url| !url.is_empty())
+            .map(str::to_string)
+    })
+}
 fn decode_base64_padded(value: &str) -> Result<Vec<u8>> {
     let mut padded = value.to_string();
     let padding = (4 - padded.len() % 4) % 4;
@@ -508,5 +667,96 @@ mod tests {
 
         assert_eq!(solved["d"], STANDARD.encode(nonce.to_string()));
         assert_eq!(solved["v"], challenge["v"]);
+    }
+    #[test]
+    fn supports_app_image_layout_and_string_live_marker() {
+        let data = json!({
+            "video": {
+                "clip_type": "live_photo",
+                "play_addr": { "uri": "https://cdn.example/live.mp4" }
+            },
+            "image_post_info": {
+                "image_list": [{
+                    "display_image": { "url_list": ["https://cdn.example/photo.webp"] },
+                    "video": {
+                        "download_addr": { "url_list": ["https://cdn.example/live-item.mp4"] }
+                    }
+                }]
+            }
+        });
+        let parser = DouyinParser;
+        let images = parser.extract_image_items(&data);
+        assert_eq!(images.len(), 1);
+        assert_eq!(
+            parser.extract_image_url(images[0]).as_deref(),
+            Some("https://cdn.example/photo.webp")
+        );
+        assert_eq!(
+            parser.extract_live_photo_url(&data, images[0]).as_deref(),
+            Some("https://cdn.example/live-item.mp4")
+        );
+    }
+
+    #[test]
+    fn does_not_mark_unflagged_soundtrack_as_live_photo() {
+        let data = json!({
+            "music": { "duration": 68 },
+            "video": {
+                "duration": 0,
+                "play_addr": { "uri": "https://cdn.example/audio.mp4" }
+            },
+            "images": [{ "url_list": ["https://cdn.example/photo.jpg"] }]
+        });
+        let parser = DouyinParser;
+        assert_eq!(
+            parser.extract_live_photo_url(&data, &data["images"][0]),
+            None
+        );
+    }
+    #[test]
+    fn extracts_nested_live_photo_and_audio_fallback() {
+        let data = json!({
+            "music": { "duration": 68 },
+            "video": {
+                "duration": 0,
+                "play_addr": { "uri": "https://cdn.example/audio.mp4" }
+            },
+            "images": [{
+                "url_list": ["https://cdn.example/photo.jpg"],
+                "video": {
+                    "play_addr": { "url_list": ["https://cdn.example/live.mp4"] }
+                }
+            }]
+        });
+        let parser = DouyinParser;
+        assert_eq!(
+            parser.extract_music_url(&data).as_deref(),
+            Some("https://cdn.example/audio.mp4")
+        );
+        assert_eq!(
+            parser
+                .extract_live_photo_url(&data, &data["images"][0])
+                .as_deref(),
+            Some("https://cdn.example/live.mp4")
+        );
+    }
+
+    #[test]
+    fn extracts_marked_top_level_live_photo() {
+        let data = json!({
+            "live_photo_type": 1,
+            "video": {
+                "duration": 3,
+                "play_addr": { "url_list": ["https://cdn.example/live.mp4"] }
+            },
+            "images": [{ "url_list": ["https://cdn.example/photo.jpg"] }]
+        });
+        let parser = DouyinParser;
+        assert_eq!(
+            parser
+                .extract_live_photo_url(&data, &data["images"][0])
+                .as_deref(),
+            Some("https://cdn.example/live.mp4")
+        );
     }
 }
