@@ -306,6 +306,10 @@ PARSE_VIDEO_PASSWORD=change-me
 PARSE_VIDEO_PROXY=http://127.0.0.1:7890
 ```
 
+`/api/proxy/video` 和 `/api/proxy/image` 同样读取 `PARSE_VIDEO_PROXY`。Docker 部署时请将该变量传入容器，并使用容器可访问的代理地址；容器内的 `127.0.0.1` 指向容器自身。
+
+若 X/Twitter 链接解析成功但下载超时，请先检查服务器到 `video.twimg.com` 的网络或代理出口。视频代理会对该域名省略抖音 Referer/Origin，避免 Twitter CDN 因来源头不匹配返回 403；其他视频地址保留原有请求头。
+
 ---
 
 ## 命令行接口

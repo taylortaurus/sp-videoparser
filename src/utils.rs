@@ -21,7 +21,7 @@ pub fn extract_url_from_string(text: &str) -> Result<String> {
 }
 
 /// 若设置了 PARSE_VIDEO_PROXY 环境变量，则为客户端应用代理
-fn apply_proxy(builder: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
+pub(crate) fn apply_proxy(builder: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
     match std::env::var("PARSE_VIDEO_PROXY") {
         Ok(proxy) if !proxy.is_empty() => match reqwest::Proxy::all(&proxy) {
             Ok(p) => builder.proxy(p),

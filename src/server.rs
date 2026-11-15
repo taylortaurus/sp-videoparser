@@ -1,6 +1,6 @@
 use crate::models::{HttpResponse, VideoParseInfo, VideoSource};
 use crate::parser::{parse_video_id, parse_video_share_url, get_supported_platforms};
-use crate::utils::extract_url_from_string;
+use crate::utils::{apply_proxy, extract_url_from_string};
 use axum::{
     body::Body,
     extract::{Query, ConnectInfo, State},
@@ -416,6 +416,20 @@ struct ProxyQuery {
     url: String,
 }
 
+fn video_proxy_request(client: &Client, url: &str) -> reqwest::RequestBuilder {
+    let mut request = client.get(url).header(reqwest::header::ACCEPT, "*/*");
+    let twitter_video = reqwest::Url::parse(url)
+        .map(|url| url.host_str() == Some("video.twimg.com"))
+        .unwrap_or(false);
+    // Twitter CDN rejects Douyin's Origin; retain the existing profile for other platforms.
+    if !twitter_video {
+        request = request
+            .header(reqwest::header::REFERER, "https://www.douyin.com/")
+            .header(reqwest::header::ORIGIN, "https://www.douyin.com");
+    }
+    request
+}
+
 async fn proxy_video_handler(
     Query(params): Query<ProxyQuery>,
     headers: HeaderMap,
@@ -433,10 +447,12 @@ async fn proxy_video_handler(
             .into_response();
     }
 
-    let client = match Client::builder()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        .timeout(std::time::Duration::from_secs(60))
-        .build()
+    let client = match apply_proxy(
+        Client::builder()
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .timeout(std::time::Duration::from_secs(60)),
+    )
+    .build()
     {
         Ok(c) => c,
         Err(e) => {
@@ -451,13 +467,7 @@ async fn proxy_video_handler(
     };
 
     // 转发客户端的 Range 请求头，支持视频分段拖动播放
-    let mut req = client
-        .get(&params.url)
-        // Douyin's signed video CDN rejects generic server-side fetches unless
-        // the request retains the browser page origin that issued the URL.
-        .header(reqwest::header::REFERER, "https://www.douyin.com/")
-        .header(reqwest::header::ORIGIN, "https://www.douyin.com")
-        .header(reqwest::header::ACCEPT, "*/*");
+    let mut req = video_proxy_request(&client, &params.url);
     if let Some(range) = headers.get(header::RANGE).and_then(|v| v.to_str().ok()) {
         req = req.header(reqwest::header::RANGE, range);
     }
@@ -520,10 +530,12 @@ async fn proxy_image_handler(Query(params): Query<ProxyQuery>) -> impl IntoRespo
     }
 
     // 创建HTTP客户端
-    let client = match Client::builder()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
+    let client = match apply_proxy(
+        Client::builder()
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .timeout(std::time::Duration::from_secs(15)),
+    )
+    .build()
     {
         Ok(c) => c,
         Err(e) => {
@@ -579,6 +591,49 @@ async fn proxy_image_handler(Query(params): Query<ProxyQuery>) -> impl IntoRespo
         .into_response()
 }
 
+
+#[cfg(test)]
+mod proxy_tests {
+    use super::video_proxy_request;
+    use reqwest::{header, Client};
+
+    #[test]
+    fn twitter_video_omits_douyin_origin() {
+        let client = Client::new();
+        for url in [
+            "https://video.twimg.com/ext_tw_video/1/video.mp4",
+            "https://VIDEO.TWIMG.COM/ext_tw_video/1/video.mp4",
+        ] {
+            let request = video_proxy_request(&client, url).build().unwrap();
+            assert!(!request.headers().contains_key(header::REFERER), "{}", url);
+            assert!(!request.headers().contains_key(header::ORIGIN), "{}", url);
+            assert_eq!(request.headers()[header::ACCEPT], "*/*");
+        }
+    }
+
+    #[test]
+    fn other_video_hosts_keep_douyin_origin() {
+        let client = Client::new();
+        for url in [
+            "https://v3.douyinvod.com/video.mp4",
+            "https://video.twimg.com.example.org/video.mp4",
+            "https://video.twimg.com@cdn.example.org/video.mp4",
+            "https://cdn.example.org/video.mp4?source=video.twimg.com",
+        ] {
+            let request = video_proxy_request(&client, url).build().unwrap();
+            assert_eq!(
+                request.headers()[header::REFERER],
+                "https://www.douyin.com/",
+                "{}", url
+            );
+            assert_eq!(
+                request.headers()[header::ORIGIN],
+                "https://www.douyin.com",
+                "{}", url
+            );
+        }
+    }
+}
 
 #[cfg(test)]
 mod ssrf_tests {
