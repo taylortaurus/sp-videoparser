@@ -59,6 +59,26 @@ impl VideoParser for TwitterParser {
 
         let json: Value = response.json().await?;
 
+        if let Ok(info) = Self::parse_syndication_response(&json) {
+            return Ok(info);
+        }
+
+        // Some playable tweets are returned as empty tombstones by X's public APIs.
+        tracing::info!(tweet_id = video_id, "Twitter 主接口未提供媒体，尝试 FxTwitter 备用解析");
+        let response = client
+            .get(format!("https://api.fxtwitter.com/status/{}", video_id))
+            .send()
+            .await?;
+        if !response.status().is_success() {
+            return Err(anyhow!("Twitter 备用接口返回错误状态码: {}", response.status().as_u16()));
+        }
+        let json: Value = response.json().await?;
+        Self::parse_fxtwitter_response(&json, video_id)
+    }
+}
+
+impl TwitterParser {
+    fn parse_syndication_response(json: &Value) -> Result<VideoParseInfo> {
         // 提取作者信息
         let author_name = json.pointer("/user/name").and_then(|v| v.as_str()).unwrap_or("");
         let author_screen_name = json.pointer("/user/screen_name").and_then(|v| v.as_str()).unwrap_or("");
@@ -129,9 +149,48 @@ impl VideoParser for TwitterParser {
 
         Ok(info)
     }
-}
 
-impl TwitterParser {
+    fn parse_fxtwitter_response(json: &Value, video_id: &str) -> Result<VideoParseInfo> {
+        if json.get("code").and_then(Value::as_u64) != Some(200) {
+            return Err(anyhow!("Twitter 备用接口无法读取该推文，请确认推文公开且仍可访问"));
+        }
+        let tweet = &json["tweet"];
+        if tweet.get("id").and_then(Value::as_str) != Some(video_id) {
+            return Err(anyhow!("Twitter 备用接口未返回匹配的推文"));
+        }
+        let media_details: Vec<Value> = tweet
+            .pointer("/media/all")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .map(|media| {
+                let kind = media.get("type").and_then(Value::as_str).unwrap_or("");
+                let variants = media.get("variants").cloned().unwrap_or_else(|| {
+                    if media.get("format").and_then(Value::as_str) == Some("video/mp4") {
+                        serde_json::json!([{"content_type": "video/mp4", "url": media["url"]}])
+                    } else {
+                        Value::Null
+                    }
+                });
+                serde_json::json!({
+                    "type": if kind == "gif" { "animated_gif" } else { kind },
+                    "media_url_https": media[if kind == "photo" { "url" } else { "thumbnail_url" }],
+                    "video_info": {"variants": variants}
+                })
+            })
+            .collect();
+        Self::parse_syndication_response(&serde_json::json!({
+            "text": tweet["text"],
+            "user": {
+                "id_str": tweet["author"]["id"],
+                "name": tweet["author"]["name"],
+                "screen_name": tweet["author"]["screen_name"],
+                "profile_image_url_https": tweet["author"]["avatar_url"]
+            },
+            "mediaDetails": media_details
+        }))
+    }
+
     /// 从 variants 中选取最高码率的 mp4
     fn pick_best_mp4(variants: Option<&Value>) -> String {
         let mut video_url = String::new();
@@ -174,6 +233,75 @@ impl TwitterParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    fn fallback_video() -> Value {
+        json!({
+            "code": 200,
+            "tweet": {
+                "id": "123",
+                "text": "Video fixture",
+                "author": {"id": "42", "name": "Author", "screen_name": "author", "avatar_url": "https://example.org/avatar.jpg"},
+                "media": {"all": [{
+                    "type": "video", "format": "video/mp4",
+                    "url": "https://video.twimg.com/high.mp4",
+                    "thumbnail_url": "https://pbs.twimg.com/cover.jpg",
+                    "variants": [
+                        {"content_type": "application/x-mpegURL", "url": "https://video.twimg.com/stream.m3u8", "bitrate": 9999},
+                        {"content_type": "video/mp4", "url": "https://video.twimg.com/low.mp4", "bitrate": 100},
+                        {"content_type": "video/mp4", "url": "https://video.twimg.com/high.mp4", "bitrate": 200}
+                    ]
+                }]}
+            }
+        })
+    }
+
+    #[test]
+    fn fallback_video_preserves_media_and_author() {
+        let info = TwitterParser::parse_fxtwitter_response(&fallback_video(), "123").unwrap();
+        assert_eq!(info.video_url.as_deref(), Some("https://video.twimg.com/high.mp4"));
+        assert_eq!(info.cover_url.as_deref(), Some("https://pbs.twimg.com/cover.jpg"));
+        assert_eq!(info.title, "Video fixture");
+        assert_eq!(info.author.uid, "42");
+        assert_eq!(info.author.name, "Author");
+        assert_eq!(info.author.avatar, "https://example.org/avatar.jpg");
+    }
+
+    #[test]
+    fn fallback_rejects_api_errors_and_wrong_tweet() {
+        let mut response = fallback_video();
+        response["code"] = json!(404);
+        assert!(TwitterParser::parse_fxtwitter_response(&response, "123").is_err());
+        response["code"] = json!(200);
+        assert!(TwitterParser::parse_fxtwitter_response(&response, "999").is_err());
+    }
+
+    #[test]
+    fn fallback_video_without_variants_uses_mp4_url() {
+        let mut response = fallback_video();
+        response["tweet"]["media"]["all"][0].as_object_mut().unwrap().remove("variants");
+        let info = TwitterParser::parse_fxtwitter_response(&response, "123").unwrap();
+        assert_eq!(info.video_url.as_deref(), Some("https://video.twimg.com/high.mp4"));
+    }
+
+    #[test]
+    fn fallback_rejects_tweet_without_media() {
+        let response = json!({"code": 200, "tweet": {"id": "123", "text": "Text only"}});
+        assert!(TwitterParser::parse_fxtwitter_response(&response, "123").is_err());
+    }
+
+    #[test]
+    fn fallback_photos_preserve_original_urls() {
+        let response = json!({"code": 200, "tweet": {"id": "123", "media": {"all": [
+            {"type": "photo", "url": "https://pbs.twimg.com/one.jpg"},
+            {"type": "photo", "url": "https://pbs.twimg.com/two.jpg"}
+        ]}}});
+        let info = TwitterParser::parse_fxtwitter_response(&response, "123").unwrap();
+        assert!(info.video_url.is_none());
+        assert_eq!(info.images.len(), 2);
+        assert_eq!(info.images[1].url, "https://pbs.twimg.com/two.jpg");
+        assert_eq!(info.cover_url.as_deref(), Some("https://pbs.twimg.com/one.jpg"));
+    }
 
     #[test]
     fn test_extract_tweet_id() {

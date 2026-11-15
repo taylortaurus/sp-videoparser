@@ -310,6 +310,8 @@ PARSE_VIDEO_PROXY=http://127.0.0.1:7890
 
 若 X/Twitter 链接解析成功但下载超时，请先检查服务器到 `video.twimg.com` 的网络或代理出口。视频代理会对该域名省略抖音 Referer/Origin，避免 Twitter CDN 因来源头不匹配返回 403；其他视频地址保留原有请求头。
 
+部分可在 X 客户端播放的推文，公开嵌入接口仍会返回空的 `TweetTombstone`。主接口返回的数据中没有可用媒体时，会自动尝试开源 [FxTwitter API](https://docs.fxembed.com/api/introduction)，并校验返回的推文 ID。备用接口只接收公开推文 ID，不接收 NAS 凭据或 X 登录 Cookie；媒体仍通过原有下载接口获取。此回退依赖 FxTwitter 服务可用，并沿用 `PARSE_VIDEO_PROXY` 出口。
+
 ---
 
 ## 命令行接口
